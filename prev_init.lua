@@ -401,21 +401,5 @@ local config = {
     end
 }
 
--- default mappings of leap.nvim
-require('leap').add_default_mappings()
-
--- firenvim customization
-vim.g.firenvim_config = {
-    globalSettings = {alt = "all"},
-    localSettings = {
-        [".*"] = {
-            cmdline = "neovim -c set lines=10",
-            content = "text",
-            priority = 0,
-            selector = "textarea",
-            takeover = "never"
-        }
-    }
-}
 
 return config
