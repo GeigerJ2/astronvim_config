@@ -16,13 +16,10 @@ return {
             --   ["remote3"] = "github_user", -- GitHub user assume AstroNvim fork
         }
     },
-
     -- Set colorscheme to use
     colorscheme = "astrodark",
-
     -- Diagnostics configuration (for vim.diagnostics.config({...})) when diagnostics are on
     diagnostics = {virtual_text = true, underline = true},
-
     lsp = {
         -- customize lsp formatting options
         formatting = {
@@ -49,7 +46,6 @@ return {
             -- "pyright"
         }
     },
-
     -- Configure require("lazy").setup() options
     -- lazy = {
     --     defaults = {lazy = true},
@@ -83,26 +79,11 @@ return {
         --     ["~/%.config/foo/.*"] = "fooscript",
         --   },
         -- }
-    end,
+    end
+    -- default mappings of leap.nvim
+    -- require("leap").add_default_mappings(),
+    -- firenvim customization
 
     -- default mappings of leap.nvim
     -- require('leap').add_default_mappings()
-
-    -- firenvim customization
-    -- vim.g.firenvim_config = {
-    --     globalSettings = {alt = "all"},
-    --     localSettings = {
-    --         [".*"] = {
-    --             cmdline = "neovim -c set lines=10",
-    --             content = "text",
-    --             priority = 0,
-    --             selector = "textarea",
-    --             takeover = "never"
-    --         }
-    --     }
-    -- }
-
-    -- default mappings of leap.nvim
-    require('leap').add_default_mappings()
-
 }
