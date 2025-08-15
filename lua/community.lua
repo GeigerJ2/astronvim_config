@@ -7,7 +7,6 @@ return {
   "AstroNvim/astrocommunity",
   { import = "astrocommunity.pack.lua" },
   { import = "astrocommunity.pack.rust" },
-  { import = "astrocommunity.motion.leap-nvim" },
   -- ... import any community contributed plugins here
 }
   -- import/override with your plugins folder
