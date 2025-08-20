@@ -7,6 +7,10 @@ return {
   "AstroNvim/astrocommunity",
   { import = "astrocommunity.pack.lua" },
   { import = "astrocommunity.pack.rust" },
+  { import = "astrocommunity.git.diffview-nvim" },
+  { import = "astrocommunity.git.neogit" },
+  { import = "astrocommunity.git.gist-nvim" },
+  { import = "astrocommunity.motion.flash-nvim" },
   -- ... import any community contributed plugins here
 }
   -- import/override with your plugins folder
