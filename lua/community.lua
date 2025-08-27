@@ -10,7 +10,10 @@ return {
   { import = "astrocommunity.git.diffview-nvim" },
   { import = "astrocommunity.git.neogit" },
   { import = "astrocommunity.git.gist-nvim" },
+  { import = "astrocommunity.git.octo-nvim" },
   { import = "astrocommunity.motion.flash-nvim" },
+  { import = "astrocommunity.test.neotest" },
+  { import = "astrocommunity.markdown-and-latex.glow-nvim" },
   -- ... import any community contributed plugins here
 }
   -- import/override with your plugins folder
