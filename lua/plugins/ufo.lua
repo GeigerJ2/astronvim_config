@@ -1,6 +1,6 @@
--- return {
+return {
 --   "kevinhwang91/nvim-ufo",
 --   -- opts = {
 --   --   base = "main", -- Change this to your target branch
 --   -- },
--- }
+}
