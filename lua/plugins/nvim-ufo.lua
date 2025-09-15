@@ -1,12 +1,16 @@
 ---@type LazySpec
 return {
   "kevinhwang91/nvim-ufo",
+  enabled = true, -- Explicitly enable nvim-ufo
   event = { "User AstroFile", "InsertEnter" },
-  -- enabled = vim.fn.has "nvim-0.11" ~= 1,
   specs = {
     {
       "AstroNvim/astrocore",
       opts = function(_, opts)
+        -- Disable AstroNvim's built-in folding
+        opts.features = opts.features or {}
+        opts.features.foldtext = false -- Disable AstroNvim's foldtext
+
         local maps = opts.mappings
         maps.n["zR"] = { function() require("ufo").openAllFolds() end, desc = "Open all folds" }
         maps.n["zM"] = { function() require("ufo").closeAllFolds() end, desc = "Close all folds" }
@@ -21,6 +25,7 @@ return {
         opt.foldlevel = 99
         opt.foldlevelstart = 99
 
+        -- Remove AstroNvim's persistent foldexpr autocmd
         opts.autocmds.persistent_astroui_foldexpr = nil
       end,
     },
@@ -35,6 +40,15 @@ return {
           })
         end
       end,
+    },
+    {
+      "AstroNvim/astroui",
+      opts = {
+        -- Disable AstroNvim's built-in foldtext
+        features = {
+          foldtext = false,
+        },
+      },
     },
   },
   dependencies = { { "kevinhwang91/promise-async", lazy = true } },
