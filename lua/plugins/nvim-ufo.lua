@@ -60,6 +60,13 @@ return {
   },
   dependencies = { { "kevinhwang91/promise-async", lazy = true } },
   opts = {
+    -- Prevent auto-folding on save/buffer display
+    close_fold_kinds_for_ft = {
+      default = {}, -- Don't auto-close any fold kinds
+    },
+    close_fold_current_line_for_ft = {
+      default = false, -- Don't auto-close folds on current line
+    },
     preview = {
       mappings = {
         scrollB = "<C-B>",
