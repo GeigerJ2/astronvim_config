@@ -42,15 +42,6 @@ return {
     servers = {
       -- "pyright"
     },
-    -- Add folding capability to all LSP servers
-    capabilities = {
-      textDocument = {
-        foldingRange = {
-          dynamicRegistration = false,
-          lineFoldingOnly = true,
-        },
-      },
-    },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
     config = {
