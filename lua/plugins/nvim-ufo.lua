@@ -22,6 +22,7 @@ return {
         maps.n["zp"] = { function() require("ufo").peekFoldedLinesUnderCursor() end, desc = "Peek fold" }
 
         -- Add fold level mappings (1-5)
+        maps.n["z0"] = { function() require("ufo").closeFoldsWith(0) end, desc = "Close folds to level 0" }
         maps.n["z1"] = { function() require("ufo").closeFoldsWith(1) end, desc = "Close folds to level 1" }
         maps.n["z2"] = { function() require("ufo").closeFoldsWith(2) end, desc = "Close folds to level 2" }
         maps.n["z3"] = { function() require("ufo").closeFoldsWith(3) end, desc = "Close folds to level 3" }
