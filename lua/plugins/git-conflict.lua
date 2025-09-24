@@ -2,6 +2,7 @@
 return {
   "akinsho/git-conflict.nvim",
   version = "*",
+  lazy = false,  -- load immediately
   event = "BufReadPre", -- Load when opening files
   config = function()
     require("git-conflict").setup {
