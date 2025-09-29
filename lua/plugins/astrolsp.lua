@@ -45,6 +45,24 @@ return {
     ---@diagnostic disable: missing-fields
     config = {
       -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
+      basedpyright = {
+        settings = {
+          basedpyright = {
+            analysis = {
+              typeCheckingMode = "standard",  -- "basic", "standard", or "strict"
+              diagnosticSeverityOverrides = {
+                reportGeneralTypeIssues = "error",
+                reportIncompatibleMethodOverride = "error",
+                reportOptionalMemberAccess = "warning",
+                reportOptionalSubscript = "warning",
+                reportUnusedFunction = "information",
+                reportUnusedImport = "information",
+                reportUnusedVariable = "information",
+              },
+            },
+          },
+        },
+      },
     },
     -- customize how language servers are attached
     handlers = {
