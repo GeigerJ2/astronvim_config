@@ -39,7 +39,7 @@ return {
     -- enable servers that you already have installed without mason
     servers = {
       -- "pyright",
-      "ruff"
+      "ruff",
     },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
@@ -49,7 +49,7 @@ return {
         settings = {
           basedpyright = {
             analysis = {
-              typeCheckingMode = "standard",  -- "basic", "standard", or "strict"
+              typeCheckingMode = "standard", -- "basic", "standard", or "strict"
               diagnosticSeverityOverrides = {
                 reportGeneralTypeIssues = "error",
                 reportIncompatibleMethodOverride = "error",
@@ -110,6 +110,17 @@ return {
           cond = function(client)
             return client.supports_method "textDocument/semanticTokens/full" and vim.lsp.semantic_tokens ~= nil
           end,
+        },
+        -- Add this for buffer diagnostics
+        ["<Leader>lb"] = {
+          function() require("telescope.builtin").diagnostics { bufnr = 0 } end,
+          desc = "Search buffer diagnostics",
+        },
+
+        -- Or this for location list
+        ["<Leader>lq"] = {
+          function() vim.diagnostic.setloclist() end,
+          desc = "Buffer diagnostics to loclist",
         },
       },
     },
