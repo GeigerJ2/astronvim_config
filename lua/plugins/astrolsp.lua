@@ -63,6 +63,11 @@ return {
           },
         },
       },
+      ruff_list = {
+        settings = {
+          configurationPreference = "filesystemFirst",
+        },
+      },
     },
     -- customize how language servers are attached
     handlers = {
