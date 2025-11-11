@@ -38,7 +38,7 @@ return {
     },
     -- enable servers that you already have installed without mason
     servers = {
-      -- "pyright",
+      "basedpyright",
       "ruff",
     },
     -- customize language server configuration options passed to `lspconfig`
@@ -46,15 +46,56 @@ return {
     config = {
       -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
       basedpyright = {
+        before_init = function(_, config)
+          -- Auto-detect Python path from various sources
+          local python_path = nil
+
+          -- 1. Check VIRTUAL_ENV environment variable (active venv)
+          local venv = vim.env.VIRTUAL_ENV
+          if venv then python_path = venv .. "/bin/python" end
+
+          -- 2. Check for local .venv in project root
+          if not python_path then
+            local root = config.root_dir or vim.fn.getcwd()
+            local local_venv = root .. "/.venv/bin/python"
+            if vim.fn.executable(local_venv) == 1 then python_path = local_venv end
+          end
+
+          -- 3. Check for hatch environments
+          if not python_path then
+            local root = config.root_dir or vim.fn.getcwd()
+            -- Try to get hatch env
+            local handle = io.popen("cd " .. root .. " && hatch env find 2>/dev/null")
+            if handle then
+              local hatch_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
+              handle:close()
+              if hatch_path ~= "" then python_path = hatch_path .. "/bin/python" end
+            end
+          end
+
+          -- 4. Fallback to system python
+          if not python_path then python_path = vim.fn.exepath "python3" or vim.fn.exepath "python" end
+
+          -- Set the python path
+          if config.settings and config.settings.python then config.settings.python.pythonPath = python_path end
+
+          vim.notify("Using Python: " .. python_path, vim.log.levels.INFO)
+        end,
         settings = {
           basedpyright = {
+            disableLanguageServices = false,
             analysis = {
-              typeCheckingMode = "standard", -- "basic", "standard", or "strict"
+              typeCheckingMode = "standard",
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+              autoImportCompletions = true,
+              diagnosticMode = "openFilesOnly",
               diagnosticSeverityOverrides = {
                 reportGeneralTypeIssues = "error",
                 reportIncompatibleMethodOverride = "error",
                 reportOptionalMemberAccess = "warning",
                 reportOptionalSubscript = "warning",
+                reportPrivateImportUsage = "none",
                 reportUnusedFunction = "information",
                 reportUnusedImport = "information",
                 reportUnusedVariable = "information",
@@ -63,36 +104,49 @@ return {
           },
         },
       },
-      ruff_list = {
+      ruff = {
         settings = {
           configurationPreference = "filesystemFirst",
+          args = { "--ignore=PLC0415" },
         },
       },
     },
     -- customize how language servers are attached
     handlers = {
-      -- a function without a key is simply the default handler, functions take two parameters, the server name and the configured options table for that server
-      -- function(server, opts) require("lspconfig")[server].setup(opts) end
-
-      -- the key is the server that is being setup with `lspconfig`
-      -- rust_analyzer = false, -- setting a handler to false will disable the set up of that language server
-      -- pyright = function(_, opts) require("lspconfig").pyright.setup(opts) end -- or a custom handler function can be passed
+      basedpyright = function(server, opts)
+        -- Force override the settings to ensure language services are enabled
+        opts.settings = vim.tbl_deep_extend("force", opts.settings or {}, {
+          basedpyright = {
+            disableLanguageServices = false, -- FORCE ENABLE
+            analysis = {
+              typeCheckingMode = "standard",
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+              autoImportCompletions = true,
+              diagnosticMode = "openFilesOnly",
+              diagnosticSeverityOverrides = {
+                reportGeneralTypeIssues = "error",
+                reportIncompatibleMethodOverride = "error",
+                reportOptionalMemberAccess = "warning",
+                reportOptionalSubscript = "warning",
+                reportPrivateImportUsage = "none",
+                reportUnusedFunction = "information",
+                reportUnusedImport = "information",
+                reportUnusedVariable = "information",
+              },
+            },
+          },
+        })
+        require("lspconfig")[server].setup(opts)
+      end,
     },
     -- Configure buffer local auto commands to add when attaching a language server
     autocmds = {
       -- first key is the `augroup` to add the auto commands to (:h augroup)
       lsp_codelens_refresh = {
-        -- Optional condition to create/delete auto command group
-        -- can either be a string of a client capability or a function of `fun(client, bufnr): boolean`
-        -- condition will be resolved for each client on each execution and if it ever fails for all clients,
-        -- the auto commands will be deleted for that buffer
         cond = "textDocument/codeLens",
-        -- cond = function(client, bufnr) return client.name == "lua_ls" end,
-        -- list of auto commands to set
         {
-          -- events to trigger
           event = { "InsertLeave", "BufEnter" },
-          -- the rest of the autocmd options (:h nvim_create_autocmd)
           desc = "Refresh codelens (buffer)",
           callback = function(args)
             if require("astrolsp").config.features.codelens then vim.lsp.codelens.refresh { bufnr = args.buf } end
@@ -103,7 +157,6 @@ return {
     -- mappings to be set up on attaching of a language server
     mappings = {
       n = {
-        -- a `cond` key can provided as the string of a server capability to be required to attach, or a function with `client` and `bufnr` parameters from the `on_attach` that returns a boolean
         gD = {
           function() vim.lsp.buf.declaration() end,
           desc = "Declaration of current symbol",
@@ -116,13 +169,10 @@ return {
             return client.supports_method "textDocument/semanticTokens/full" and vim.lsp.semantic_tokens ~= nil
           end,
         },
-        -- Add this for buffer diagnostics
         ["<Leader>lb"] = {
           function() require("telescope.builtin").diagnostics { bufnr = 0 } end,
           desc = "Search buffer diagnostics",
         },
-
-        -- Or this for location list
         ["<Leader>lq"] = {
           function() vim.diagnostic.setloclist() end,
           desc = "Buffer diagnostics to loclist",
@@ -130,7 +180,6 @@ return {
       },
     },
     -- A custom `on_attach` function to be run after the default `on_attach` function
-    -- takes two parameters `client` and `bufnr`  (`:h lspconfig-setup`)
     on_attach = function(client, bufnr)
       -- this would disable semanticTokensProvider for all clients
       -- client.server_capabilities.semanticTokensProvider = nil

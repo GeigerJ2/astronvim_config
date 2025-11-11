@@ -53,6 +53,36 @@ return {
         -- This can be found in the `lua/lazy_setup.lua` file
       },
     },
+    commands = {
+      CommitMsg = {
+        function(opts)
+          local pr_num = opts.args
+          local tmpfile = vim.fn.tempname() .. ".COMMIT_EDITMSG"
+          vim.cmd("edit " .. tmpfile)
+          vim.bo.filetype = "gitcommit"
+
+          local title = "title"
+
+          if pr_num ~= "" then
+            local handle = io.popen("gh pr view " .. pr_num .. " --json title --jq .title 2>/dev/null")
+            if handle then
+              local result = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
+              if result ~= "" then
+                title = result .. " (#" .. pr_num .. ")"
+              else
+                vim.notify("Could not fetch PR #" .. pr_num, vim.log.levels.WARN)
+              end
+              handle:close()
+            end
+          end
+
+          vim.api.nvim_buf_set_lines(0, 0, -1, false, { title, "", "" })
+          vim.api.nvim_win_set_cursor(0, { 3, 0 })
+        end,
+        nargs = "?", -- Optional argument
+        desc = "Edit commit message (optional PR number)",
+      },
+    },
     -- Mappings can be configured through AstroCore as well.
     -- NOTE: keycodes follow the casing in the vimdocs. For example, `<Leader>` must be capitalized
     mappings = {
@@ -81,6 +111,53 @@ return {
 
         -- setting a mapping to false will disable it
         -- ["<C-S>"] = false,
+        ["<leader>gm"] = {
+          function()
+            local tmpfile = vim.fn.tempname() .. ".COMMIT_EDITMSG"
+            vim.cmd("edit " .. tmpfile)
+            vim.bo.filetype = "gitcommit"
+            vim.api.nvim_buf_set_lines(0, 0, -1, false, { "title", "", "" })
+            vim.api.nvim_win_set_cursor(0, { 3, 0 })
+          end,
+          desc = "Edit commit message (scratch)",
+        },
+        ["<leader>f<CR>"] = { "<cmd>Telescope resume<cr>", desc = "Resume previous search" },
+        ["<leader>lf"] = {
+          function()
+            require("telescope.builtin").lsp_document_symbols {
+              symbols = { "function", "method" },
+            }
+          end,
+          desc = "Search functions/methods",
+        },
+        ["<leader>lc"] = {
+          function()
+            require("telescope.builtin").lsp_document_symbols {
+              symbols = { "class", "struct" },
+            }
+          end,
+          desc = "Search classes",
+        },
+        -- ["<leader>lF"] = {
+        --   function()
+        --     require("telescope.builtin").lsp_workspace_symbols {
+        --       symbols = { "function", "method" },
+        --     }
+        --   end,
+        --   desc = "Search functions (workspace)",
+        -- },
+        -- ["<leader>lC"] = {
+        --   function()
+        --     require("telescope.builtin").lsp_workspace_symbols {
+        --       symbols = { "class", "struct" },
+        --     }
+        --   end,
+        --   desc = "Search classes (workspace)",
+        -- },
+        vim.api.nvim_create_user_command("DiffViewPR", function()
+          local merge_base = vim.fn.system("git merge-base HEAD upstream/main"):gsub("\n", "")
+          vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD")
+        end, {}),
       },
     },
   },
