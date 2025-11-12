@@ -155,7 +155,35 @@ return {
         --   desc = "Search classes (workspace)",
         -- },
         vim.api.nvim_create_user_command("DiffViewPR", function()
-          local merge_base = vim.fn.system("git merge-base HEAD upstream/main"):gsub("\n", "")
+          -- Get the base branch from GitHub PR
+          local base_branch = vim.fn.system("gh pr view --json baseRefName -q .baseRefName 2>/dev/null"):gsub("\n", "")
+
+          if vim.v.shell_error ~= 0 or base_branch == "" then
+            -- Fallback: try upstream/main, then origin/main, then main
+            local base = vim.fn.system("git rev-parse --verify upstream/main 2>/dev/null"):gsub("\n", "")
+            if vim.v.shell_error ~= 0 then
+              base = vim.fn.system("git rev-parse --verify origin/main 2>/dev/null"):gsub("\n", "")
+              if vim.v.shell_error ~= 0 then
+                base = "main"
+              else
+                base = "origin/main"
+              end
+            else
+              base = "upstream/main"
+            end
+            base_branch = base
+          else
+            -- Prepend upstream/ or origin/ if needed
+            local remote_base =
+              vim.fn.system("git rev-parse --verify upstream/" .. base_branch .. " 2>/dev/null"):gsub("\n", "")
+            if vim.v.shell_error ~= 0 then
+              base_branch = "origin/" .. base_branch
+            else
+              base_branch = "upstream/" .. base_branch
+            end
+          end
+
+          local merge_base = vim.fn.system("git merge-base HEAD " .. base_branch):gsub("\n", "")
           vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD")
         end, {}),
       },

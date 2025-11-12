@@ -77,7 +77,9 @@ return {
           if not python_path then python_path = vim.fn.exepath "python3" or vim.fn.exepath "python" end
 
           -- Set the python path
-          if config.settings and config.settings.python then config.settings.python.pythonPath = python_path end
+          config.settings = config.settings or {}
+          config.settings.python = config.settings.python or {}
+          config.settings.python.pythonPath = python_path
 
           vim.notify("Using Python: " .. python_path, vim.log.levels.INFO)
         end,
