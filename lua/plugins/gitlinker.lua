@@ -1,25 +1,24 @@
 return {
-  "ruifm/gitlinker.nvim",
+  "linrongbin16/gitlinker.nvim",
+  cmd = "GitLink",
+  config = function()
+    require("gitlinker").setup()
+  end,
   keys = {
     {
       "<leader>gy",
       function()
-        require("gitlinker").get_buf_range_url("n", {
-          action_callback = require("gitlinker.actions").copy_to_clipboard,
+        -- Check if upstream exists, otherwise use origin
+        local handle = io.popen("git remote 2>/dev/null | grep -q '^upstream$' && echo 'upstream' || echo 'origin'")
+        local remote = handle:read("*l")
+        handle:close()
+        
+        require("gitlinker").link({
+          remote = remote,
         })
       end,
       desc = "Copy git permalink",
-      mode = "n",
-    },
-    {
-      "<leader>gy",
-      function()
-        require("gitlinker").get_buf_range_url("v", {
-          action_callback = require("gitlinker.actions").copy_to_clipboard,
-        })
-      end,
-      desc = "Copy git permalink",
-      mode = "v",
+      mode = { "n", "v" },
     },
   },
 }
