@@ -31,33 +31,33 @@ return {
   },
   keys = {
     {
-      "<leader>oi",
+      "<localleader>oi",
       "<CMD>Octo issue list<CR>",
       desc = "List GitHub Issues",
     },
     {
-      "<leader>op",
+      "<localleader>op",
       "<CMD>Octo pr list<CR>",
       desc = "List GitHub PullRequests",
     },
     {
-      "<leader>od",
+      "<localleader>od",
       "<CMD>Octo discussion list<CR>",
       desc = "List GitHub Discussions",
     },
     {
-      "<leader>on",
+      "<localleader>on",
       "<CMD>Octo notification list<CR>",
       desc = "List GitHub Notifications",
     },
     {
-      "<leader>os",
+      "<localleader>os",
       function() require("octo.utils").create_base_search_command { include_current_repo = true } end,
       desc = "Search GitHub",
     },
     -- Jump to local file at current line in next tab
     {
-      "<leader>of",
+      "<localleader>of",
       function()
         local bufname = vim.api.nvim_buf_get_name(0)
         local line = vim.api.nvim_win_get_cursor(0)[1]
@@ -124,7 +124,7 @@ return {
     },
     -- Make current buffer modifiable
     {
-      "<leader>om",
+      "<localleader>om",
       function()
         local is_modifiable = vim.api.nvim_buf_get_option(0, "modifiable")
         if not is_modifiable then
@@ -138,7 +138,7 @@ return {
     },
     -- Alternative: open in split
     {
-      "<leader>oF",
+      "<localleader>oF",
       function()
         local bufname = vim.api.nvim_buf_get_name(0)
         local line = vim.api.nvim_win_get_cursor(0)[1]
@@ -170,6 +170,16 @@ return {
         end
       end,
       desc = "Octo: Open file in split",
+    },
+    -- Toggle line wrap
+    {
+      "<localleader>ow",
+      function()
+        vim.wo.wrap = not vim.wo.wrap
+        local status = vim.wo.wrap and "enabled" or "disabled"
+        vim.notify("Line wrap " .. status, vim.log.levels.INFO)
+      end,
+      desc = "Octo: Toggle line wrap",
     },
   },
   dependencies = {
