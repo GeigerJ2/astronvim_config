@@ -38,23 +38,23 @@ return {
     },
     -- enable servers that you already have installed without mason
     servers = {
-      "basedpyright",
+      "pyright",
       "ruff",
     },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
     config = {
       -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
-      basedpyright = {
+      pyright = {
         before_init = function(_, config)
-          -- Auto-detect Python path from various sources
+          -- Auto-detect Python path from various sources (uv, hatch, venv)
           local python_path = nil
 
           -- 1. Check VIRTUAL_ENV environment variable (active venv)
           local venv = vim.env.VIRTUAL_ENV
           if venv then python_path = venv .. "/bin/python" end
 
-          -- 2. Check for local .venv in project root
+          -- 2. Check for local .venv in project root (uv/hatch/venv)
           if not python_path then
             local root = config.root_dir or vim.fn.getcwd()
             local local_venv = root .. "/.venv/bin/python"
@@ -64,7 +64,6 @@ return {
           -- 3. Check for hatch environments
           if not python_path then
             local root = config.root_dir or vim.fn.getcwd()
-            -- Try to get hatch env
             local handle = io.popen("cd " .. root .. " && hatch env find 2>/dev/null")
             if handle then
               local hatch_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
@@ -73,7 +72,18 @@ return {
             end
           end
 
-          -- 4. Fallback to system python
+          -- 4. Check for uv managed environment
+          if not python_path then
+            local root = config.root_dir or vim.fn.getcwd()
+            local handle = io.popen("cd " .. root .. " && uv run which python 2>/dev/null")
+            if handle then
+              local uv_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
+              handle:close()
+              if uv_path ~= "" and vim.fn.executable(uv_path) == 1 then python_path = uv_path end
+            end
+          end
+
+          -- 5. Fallback to system python
           if not python_path then python_path = vim.fn.exepath "python3" or vim.fn.exepath "python" end
 
           -- Set the python path
@@ -84,24 +94,13 @@ return {
           vim.notify("Using Python: " .. python_path, vim.log.levels.INFO)
         end,
         settings = {
-          basedpyright = {
-            disableLanguageServices = false,
+          python = {
             analysis = {
               typeCheckingMode = "standard",
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
               autoImportCompletions = true,
               diagnosticMode = "openFilesOnly",
-              diagnosticSeverityOverrides = {
-                reportGeneralTypeIssues = "error",
-                reportIncompatibleMethodOverride = "error",
-                reportOptionalMemberAccess = "warning",
-                reportOptionalSubscript = "warning",
-                reportPrivateImportUsage = "none",
-                reportUnusedFunction = "information",
-                reportUnusedImport = "information",
-                reportUnusedVariable = "information",
-              },
             },
           },
         },
@@ -117,34 +116,7 @@ return {
       },
     },
     -- customize how language servers are attached
-    handlers = {
-      basedpyright = function(server, opts)
-        -- Force override the settings to ensure language services are enabled
-        opts.settings = vim.tbl_deep_extend("force", opts.settings or {}, {
-          basedpyright = {
-            disableLanguageServices = false, -- FORCE ENABLE
-            analysis = {
-              typeCheckingMode = "standard",
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
-              autoImportCompletions = true,
-              diagnosticMode = "openFilesOnly",
-              diagnosticSeverityOverrides = {
-                reportGeneralTypeIssues = "error",
-                reportIncompatibleMethodOverride = "error",
-                reportOptionalMemberAccess = "warning",
-                reportOptionalSubscript = "warning",
-                reportPrivateImportUsage = "none",
-                reportUnusedFunction = "information",
-                reportUnusedImport = "information",
-                reportUnusedVariable = "information",
-              },
-            },
-          },
-        })
-        require("lspconfig")[server].setup(opts)
-      end,
-    },
+    handlers = {},
     -- Configure buffer local auto commands to add when attaching a language server
     autocmds = {
       -- first key is the `augroup` to add the auto commands to (:h augroup)
