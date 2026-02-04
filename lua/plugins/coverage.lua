@@ -2,6 +2,7 @@
 return {
   "andythigpen/nvim-coverage",
   version = "*",
+  lazy = false, -- Load immediately instead of waiting for keybindings
   dependencies = {
     "nvim-lua/plenary.nvim",
   },

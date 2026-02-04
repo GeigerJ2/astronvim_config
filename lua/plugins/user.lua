@@ -39,6 +39,12 @@ return {
           }, "\n"),
         },
       },
+      picker = {
+        mappings = {
+          ["<C-\\>"] = "vsplit",
+          ["<M-v>"] = "vsplit",
+        },
+      },
     },
   },
 
