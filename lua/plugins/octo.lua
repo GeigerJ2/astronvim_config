@@ -29,6 +29,72 @@ return {
       },
     },
   },
+  config = function(_, opts)
+    require("octo").setup(opts)
+
+    -- Align octo buffers after they're loaded
+    vim.api.nvim_create_autocmd({ "BufReadPost", "BufEnter", "BufWinEnter" }, {
+      pattern = "octo://*",
+      callback = function(args)
+        local buf = args.buf
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+
+        local bufname = vim.api.nvim_buf_get_name(buf)
+
+        -- Debug: print when autocmd triggers
+        print("Octo buffer detected: " .. bufname)
+
+        vim.defer_fn(function()
+          if not vim.api.nvim_buf_is_valid(buf) then return end
+
+          local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+          local first_line = lines[1] or ""
+
+          -- Check if this is a review_diff buffer (left side) and needs padding
+          if bufname:match "review_diff" and first_line ~= "" and #lines > 1 then
+            print("Adding padding to buffer: " .. bufname)
+
+            local modifiable = vim.bo[buf].modifiable
+            vim.bo[buf].modifiable = true
+            vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "" })
+            vim.bo[buf].modifiable = modifiable
+
+            -- Force diff update
+            vim.schedule(function()
+              if vim.wo.diff then vim.cmd "diffupdate" end
+            end)
+          end
+        end, 200)
+      end,
+    })
+  end,
+  -- config = function(_, opts)
+  --   require("octo").setup(opts)
+  --
+  --   -- Align octo buffers after they're loaded
+  --   vim.api.nvim_create_autocmd({ "BufReadPost", "BufEnter" }, {
+  --     pattern = "octo://*",
+  --     callback = function(args)
+  --       vim.defer_fn(function()
+  --         local buf = args.buf
+  --         if not vim.api.nvim_buf_is_valid(buf) then return end
+  --
+  --         local first_line = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
+  --
+  --         -- Only add padding if buffer has content and no padding yet
+  --         if first_line and first_line ~= "" and vim.api.nvim_buf_line_count(buf) > 1 then
+  --           local modifiable = vim.bo[buf].modifiable
+  --           vim.bo[buf].modifiable = true
+  --           vim.api.nvim_buf_set_lines(buf, 0, 0, false, { "" })
+  --           vim.bo[buf].modifiable = modifiable
+  --
+  --           -- Refresh diff
+  --           if vim.wo.diff then vim.cmd "diffupdate" end
+  --         end
+  --       end, 150)
+  --     end,
+  --   })
+  -- end,
   keys = {
     {
       "<localleader>oi",
@@ -95,12 +161,12 @@ return {
             print "DEBUG - File is readable"
 
             -- Check if buffer is modifiable
-            local is_modifiable = vim.api.nvim_buf_get_option(0, "modifiable")
+            local is_modifiable = vim.bo[0].modifiable
             print("DEBUG - Current buffer modifiable: " .. tostring(is_modifiable))
 
             -- If we're already in the local file and it's not modifiable, make it so
             if bufname == filepath and not is_modifiable then
-              vim.api.nvim_buf_set_option(0, "modifiable", true)
+              vim.bo[0].modifiable = true
               vim.notify("Made buffer modifiable", vim.log.levels.INFO)
             else
               -- Open in next tab
@@ -126,9 +192,9 @@ return {
     {
       "<localleader>om",
       function()
-        local is_modifiable = vim.api.nvim_buf_get_option(0, "modifiable")
+        local is_modifiable = vim.bo[0].modifiable
         if not is_modifiable then
-          vim.api.nvim_buf_set_option(0, "modifiable", true)
+          vim.bo[0].modifiable = true
           vim.notify("Buffer is now modifiable", vim.log.levels.INFO)
         else
           vim.notify("Buffer is already modifiable", vim.log.levels.INFO)

@@ -52,6 +52,12 @@ vim.api.nvim_create_autocmd("FileType", {
     -- Set visual guides
     vim.opt_local.colorcolumn = "50,72"
 
+    -- Set tab width to 4 spaces
+    vim.opt_local.tabstop = 4
+    vim.opt_local.shiftwidth = 4
+    vim.opt_local.softtabstop = 4
+    vim.opt_local.expandtab = true
+
     -- Different textwidth based on line number
     vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
       buffer = 0,
