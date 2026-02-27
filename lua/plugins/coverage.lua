@@ -1,4 +1,3 @@
--- plugins/coverage.lua
 return {
   "andythigpen/nvim-coverage",
   version = "*",
@@ -33,16 +32,7 @@ return {
       },
       lang = {
         -- customize language specific settings
-        python = {
-          -- Can specify coverage file path or let it auto-detect
-          coverage_file = ".coverage", -- or "coverage.xml"
-        },
-        javascript = {
-          coverage_file = "coverage/lcov.info",
-        },
-        typescript = {
-          coverage_file = "coverage/lcov.info",
-        },
+        python = {},
       },
     })
   end,
