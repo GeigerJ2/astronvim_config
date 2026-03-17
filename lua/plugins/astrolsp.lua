@@ -40,6 +40,7 @@ return {
     servers = {
       "pyright",
       "ruff",
+      "marksman"
     },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields

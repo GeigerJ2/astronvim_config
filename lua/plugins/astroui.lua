@@ -23,10 +23,31 @@ return {
     },
     highlights = {
       init = { -- this table overrides highlights in all themes
-        -- Normal = { bg = "#000000" },
+        -- GitHub-style diff colors for diffview
+        DiffAdd = { bg = "#0d2818" },
+        DiffDelete = { bg = "#3d0f0f" },
+        DiffChange = { bg = "#1a3a4d" },
+        DiffText = { bg = "#1a4a1a", bold = true },
+        -- Diffview-specific highlights
+        DiffviewDiffAdd = { bg = "#0d2818" },
+        DiffviewDiffDelete = { bg = "#3d0f0f", fg = "#6e3535" },
+        DiffviewDiffChange = { bg = "#1a3a4d" },
+        DiffviewDiffText = { bg = "#1a4a1a" },
+        -- Folded/context lines (collapsed hunk separators)
+        Folded = { bg = "#1c1c1c", fg = "#555555", italic = true },
+        DiffviewFoldColumn = { bg = "#1c1c1c", fg = "#555555" },
       },
       astrodark = { -- a table of overrides/changes when applying the astrotheme theme
-        -- Normal = { bg = "#000000" },
+        -- GitHub-style diff colors for diffview
+        DiffAdd = { bg = "#0d2818" },
+        DiffDelete = { bg = "#3d0f0f" },
+        DiffChange = { bg = "#1a3a4d" },
+        DiffText = { bg = "#1a4a1a", bold = true },
+        DiffviewDiffAdd = { bg = "#0d2818" },
+        DiffviewDiffDelete = { bg = "#3d0f0f", fg = "#6e3535" },
+        DiffviewDiffChange = { bg = "#1a3a4d" },
+        DiffviewDiffText = { bg = "#1a4a1a" },
+        Folded = { bg = "#1c1c1c", fg = "#555555", italic = true },
       },
     },
     -- Icons can be configured throughout the interface

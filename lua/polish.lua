@@ -3,6 +3,33 @@
 -- This will run last in the setup process.
 -- This is just pure lua so anything that doesn't
 -- fit in the normal config locations above can go here
+
+-- GitHub-style diff colors (applied after colorscheme loads)
+vim.api.nvim_create_autocmd("ColorScheme", {
+  pattern = "*",
+  callback = function()
+    vim.api.nvim_set_hl(0, "DiffAdd", { bg = "#0d2818" })
+    vim.api.nvim_set_hl(0, "DiffDelete", { bg = "#3d0f0f" })
+    vim.api.nvim_set_hl(0, "DiffChange", { bg = "#1a3a4d" })
+    vim.api.nvim_set_hl(0, "DiffText", { bg = "#1a4a1a", bold = true })
+    vim.api.nvim_set_hl(0, "DiffviewDiffAdd", { bg = "#0d2818" })
+    vim.api.nvim_set_hl(0, "DiffviewDiffDelete", { bg = "#3d0f0f", fg = "#6e3535" })
+    vim.api.nvim_set_hl(0, "DiffviewDiffChange", { bg = "#1a3a4d" })
+    vim.api.nvim_set_hl(0, "DiffviewDiffText", { bg = "#1a4a1a" })
+    vim.api.nvim_set_hl(0, "Folded", { bg = "#1c1c1c", fg = "#555555", italic = true })
+  end,
+})
+-- Also apply immediately for current session
+vim.api.nvim_set_hl(0, "DiffAdd", { bg = "#0d2818" })
+vim.api.nvim_set_hl(0, "DiffDelete", { bg = "#3d0f0f" })
+vim.api.nvim_set_hl(0, "DiffChange", { bg = "#1a3a4d" })
+vim.api.nvim_set_hl(0, "DiffText", { bg = "#1a4a1a", bold = true })
+vim.api.nvim_set_hl(0, "DiffviewDiffAdd", { bg = "#0d2818" })
+vim.api.nvim_set_hl(0, "DiffviewDiffDelete", { bg = "#3d0f0f", fg = "#6e3535" })
+vim.api.nvim_set_hl(0, "DiffviewDiffChange", { bg = "#1a3a4d" })
+vim.api.nvim_set_hl(0, "DiffviewDiffText", { bg = "#1a4a1a" })
+vim.api.nvim_set_hl(0, "Folded", { bg = "#1c1c1c", fg = "#555555", italic = true })
+
 -- Function to format the entire git commit buffer
 
 local function format_git_commit()
