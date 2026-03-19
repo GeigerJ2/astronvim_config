@@ -3,6 +3,38 @@
 -- NOTE: We highly recommend setting up the Lua Language Server (`:LspInstall lua_ls`)
 --       as this provides autocomplete and documentation while editing
 
+-- Shared Python path detection (used by pyright and basedpyright)
+local function detect_python_path(root_dir)
+  -- 1. Check VIRTUAL_ENV environment variable (active venv)
+  local venv = vim.env.VIRTUAL_ENV
+  if venv then return venv .. "/bin/python" end
+
+  local root = root_dir or vim.fn.getcwd()
+
+  -- 2. Check for local .venv in project root (uv/hatch/venv)
+  local local_venv = root .. "/.venv/bin/python"
+  if vim.fn.executable(local_venv) == 1 then return local_venv end
+
+  -- 3. Check for hatch environments
+  local handle = io.popen("cd " .. root .. " && hatch env find 2>/dev/null")
+  if handle then
+    local hatch_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
+    handle:close()
+    if hatch_path ~= "" then return hatch_path .. "/bin/python" end
+  end
+
+  -- 4. Check for uv managed environment
+  handle = io.popen("cd " .. root .. " && uv run which python 2>/dev/null")
+  if handle then
+    local uv_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
+    handle:close()
+    if uv_path ~= "" and vim.fn.executable(uv_path) == 1 then return uv_path end
+  end
+
+  -- 5. Fallback to system python
+  return vim.fn.exepath "python3" or vim.fn.exepath "python"
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrolsp",
@@ -20,79 +52,49 @@ return {
       -- control auto formatting on save
       format_on_save = {
         enabled = false, -- enable or disable format on save globally
-        allow_filetypes = { -- enable format on save for specified filetypes only
-          -- "go",
-        },
-        ignore_filetypes = { -- disable format on save for specified filetypes
-          -- "python",
-        },
+        allow_filetypes = {},
+        ignore_filetypes = {},
       },
-      disabled = { -- disable formatting capabilities for the listed language servers
-        -- disable lua_ls formatting capability if you want to use StyLua to format your lua code
-        -- "lua_ls",
-      },
+      disabled = {},
       timeout_ms = 1000, -- default format timeout
-      -- filter = function(client) -- fully override the default formatting function
-      --   return true
-      -- end
     },
     -- enable servers that you already have installed without mason
+    -- basedpyright is the default; pyright is configured but not auto-started (toggle with <leader>lpl)
     servers = {
+      "basedpyright",
       "pyright",
       "ruff",
-      "marksman"
+      "marksman",
     },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
     config = {
-      -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
-      pyright = {
+      basedpyright = {
         before_init = function(_, config)
-          -- Auto-detect Python path from various sources (uv, hatch, venv)
-          local python_path = nil
-
-          -- 1. Check VIRTUAL_ENV environment variable (active venv)
-          local venv = vim.env.VIRTUAL_ENV
-          if venv then python_path = venv .. "/bin/python" end
-
-          -- 2. Check for local .venv in project root (uv/hatch/venv)
-          if not python_path then
-            local root = config.root_dir or vim.fn.getcwd()
-            local local_venv = root .. "/.venv/bin/python"
-            if vim.fn.executable(local_venv) == 1 then python_path = local_venv end
-          end
-
-          -- 3. Check for hatch environments
-          if not python_path then
-            local root = config.root_dir or vim.fn.getcwd()
-            local handle = io.popen("cd " .. root .. " && hatch env find 2>/dev/null")
-            if handle then
-              local hatch_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
-              handle:close()
-              if hatch_path ~= "" then python_path = hatch_path .. "/bin/python" end
-            end
-          end
-
-          -- 4. Check for uv managed environment
-          if not python_path then
-            local root = config.root_dir or vim.fn.getcwd()
-            local handle = io.popen("cd " .. root .. " && uv run which python 2>/dev/null")
-            if handle then
-              local uv_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
-              handle:close()
-              if uv_path ~= "" and vim.fn.executable(uv_path) == 1 then python_path = uv_path end
-            end
-          end
-
-          -- 5. Fallback to system python
-          if not python_path then python_path = vim.fn.exepath "python3" or vim.fn.exepath "python" end
-
-          -- Set the python path
+          local python_path = detect_python_path(config.root_dir)
           config.settings = config.settings or {}
           config.settings.python = config.settings.python or {}
           config.settings.python.pythonPath = python_path
-
-          vim.notify("Using Python: " .. python_path, vim.log.levels.INFO)
+          vim.notify("basedpyright using Python: " .. python_path, vim.log.levels.INFO)
+        end,
+        settings = {
+          basedpyright = {
+            analysis = {
+              autoSearchPaths = true,
+              diagnosticMode = "openFilesOnly",
+              useLibraryCodeForTypes = true,
+            },
+          },
+        },
+      },
+      pyright = {
+        autostart = false, -- only started via <leader>lpl toggle
+        before_init = function(_, config)
+          local python_path = detect_python_path(config.root_dir)
+          config.settings = config.settings or {}
+          config.settings.python = config.settings.python or {}
+          config.settings.python.pythonPath = python_path
+          vim.notify("pyright using Python: " .. python_path, vim.log.levels.INFO)
         end,
         settings = {
           python = {
@@ -107,12 +109,14 @@ return {
         },
       },
       ruff = {
+        capabilities = {
+          general = {
+            positionEncodings = { "utf-16" },
+          },
+        },
         settings = {
           configurationPreference = "filesystemFirst",
           args = { "--ignore=PLC0415" },
-          basedpyright = {
-            disableLanguageServices = false,
-          },
         },
       },
     },
@@ -155,12 +159,29 @@ return {
           function() vim.diagnostic.setloclist() end,
           desc = "Buffer diagnostics to loclist",
         },
+        ["<Leader>lps"] = {
+          function()
+            for _, client in ipairs(vim.lsp.get_clients { name = "pyright" }) do
+              client:stop()
+            end
+            vim.cmd "LspStart basedpyright"
+            vim.notify("Switched to basedpyright (strict)", vim.log.levels.INFO)
+          end,
+          desc = "LSP: strict (basedpyright)",
+        },
+        ["<Leader>lpl"] = {
+          function()
+            for _, client in ipairs(vim.lsp.get_clients { name = "basedpyright" }) do
+              client:stop()
+            end
+            vim.cmd "LspStart pyright"
+            vim.notify("Switched to pyright (lenient)", vim.log.levels.INFO)
+          end,
+          desc = "LSP: lenient (pyright)",
+        },
       },
     },
     -- A custom `on_attach` function to be run after the default `on_attach` function
-    on_attach = function(client, bufnr)
-      -- this would disable semanticTokensProvider for all clients
-      -- client.server_capabilities.semanticTokensProvider = nil
-    end,
+    on_attach = function(client, bufnr) end,
   },
 }

@@ -3,7 +3,7 @@ return {
   {
     "williamboman/mason-lspconfig.nvim",
     opts = {
-      ensure_installed = { "pyright" },
+      ensure_installed = { "pyright", "basedpyright" },
     },
   },
   {
