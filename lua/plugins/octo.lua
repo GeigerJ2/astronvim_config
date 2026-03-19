@@ -44,21 +44,6 @@ return {
       end,
     })
 
-    -- Set diff highlight colors in octo's review window highlight namespaces
-    local constants = require "octo.constants"
-    local left_ns = constants.OCTO_REVIEW_LEFT_HIGHLIGHT_NS
-    local right_ns = constants.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS
-    -- Left side: removed lines in red, changed lines in red
-    vim.api.nvim_set_hl(left_ns, "DiffAdd", { bg = "#0d2818" })
-    vim.api.nvim_set_hl(left_ns, "DiffDelete", { bg = "#3d0f0f" })
-    vim.api.nvim_set_hl(left_ns, "DiffChange", { link = "DiffDelete" })
-    vim.api.nvim_set_hl(left_ns, "DiffText", { bg = "#5d2d2d", bold = true })
-    -- Right side: added lines in green, changed lines in green
-    vim.api.nvim_set_hl(right_ns, "DiffAdd", { bg = "#0d2818" })
-    vim.api.nvim_set_hl(right_ns, "DiffDelete", { bg = "#3d0f0f" })
-    vim.api.nvim_set_hl(right_ns, "DiffChange", { link = "DiffAdd" })
-    vim.api.nvim_set_hl(right_ns, "DiffText", { bg = "#1a4a1a", bold = true })
-
     -- Patch FileEntry.show_diff to use nvim_win_call instead of nvim_buf_call.
     -- The original calls :diffthis via nvim_buf_call which doesn't properly
     -- switch window context, so diff mode may not activate on both windows.
