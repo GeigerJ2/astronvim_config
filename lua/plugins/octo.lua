@@ -67,6 +67,11 @@ return {
         end
         ::continue::
       end
+      -- Make right-side (local file) buffer modifiable so edits can be made
+      -- during review. Octo sets modifiable=false on all review buffers.
+      if self.right_bufid and vim.api.nvim_buf_is_valid(self.right_bufid) then
+        vim.bo[self.right_bufid].modifiable = true
+      end
     end
   end,
   keys = {
