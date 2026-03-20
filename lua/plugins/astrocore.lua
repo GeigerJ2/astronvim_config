@@ -187,6 +187,18 @@ return {
           vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD")
         end, {}),
       },
+      v = {
+        ["<Leader>fv"] = {
+          function()
+            local saved = vim.fn.getreg('"')
+            vim.cmd('noau normal! "vy')
+            local selected = vim.fn.getreg("v")
+            vim.fn.setreg('"', saved)
+            require("telescope.builtin").grep_string({ search = selected })
+          end,
+          desc = "Search selected text",
+        },
+      },
     },
   },
 }

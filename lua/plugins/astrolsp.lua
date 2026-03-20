@@ -84,6 +84,7 @@ return {
               autoSearchPaths = true,
               diagnosticMode = "openFilesOnly",
               useLibraryCodeForTypes = true,
+              exclude = { "**/*.pyi" },
               diagnosticSeverityOverrides = {
                 -- basedpyright-only rules (no mypy equivalent)
                 reportAny = "information",
@@ -119,6 +120,7 @@ return {
                 reportUnusedImport = "information",
                 reportUnusedVariable = "information",
                 reportUnusedExpression = "information",
+                reportUnannotatedClassAttribute = "information",
               },
             },
           },
@@ -141,6 +143,7 @@ return {
               useLibraryCodeForTypes = true,
               autoImportCompletions = true,
               diagnosticMode = "openFilesOnly",
+              exclude = { "**/*.pyi" },
             },
           },
         },
@@ -153,7 +156,7 @@ return {
         },
         settings = {
           configurationPreference = "filesystemFirst",
-          args = { "--ignore=PLC0415" },
+          args = { "--ignore=PLC0415", "--extend-exclude=*.pyi" },
         },
       },
     },
