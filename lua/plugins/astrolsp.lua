@@ -35,6 +35,16 @@ local function detect_python_path(root_dir)
   return vim.fn.exepath "python3" or vim.fn.exepath "python"
 end
 
+-- Query major.minor version from a Python interpreter
+local function detect_python_version(python_path)
+  local handle = io.popen(python_path .. ' -c "import sys; print(f\'{sys.version_info.major}.{sys.version_info.minor}\')" 2>/dev/null')
+  if handle then
+    local version = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
+    handle:close()
+    if version ~= "" then return version end
+  end
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrolsp",
@@ -75,7 +85,13 @@ return {
           config.settings = config.settings or {}
           config.settings.python = config.settings.python or {}
           config.settings.python.pythonPath = python_path
-          vim.notify("basedpyright using Python: " .. python_path, vim.log.levels.INFO)
+          local version = detect_python_version(python_path)
+          if version then
+            config.settings.basedpyright = config.settings.basedpyright or {}
+            config.settings.basedpyright.analysis = config.settings.basedpyright.analysis or {}
+            config.settings.basedpyright.analysis.pythonVersion = version
+          end
+          vim.notify("basedpyright using Python " .. (version or "?") .. ": " .. python_path, vim.log.levels.INFO)
         end,
         settings = {
           basedpyright = {
