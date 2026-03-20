@@ -43,7 +43,7 @@ return {
     -- Configuration table of features provided by AstroLSP
     features = {
       codelens = true, -- enable/disable codelens refresh on start
-      inlay_hints = false, -- enable/disable inlay hints on start
+      inlay_hints = true, -- enable/disable inlay hints on start
       semantic_tokens = true, -- enable/disable semantic token highlighting
       fold = true, -- enable LSP folding
     },
@@ -80,9 +80,46 @@ return {
         settings = {
           basedpyright = {
             analysis = {
+              typeCheckingMode = "all",
               autoSearchPaths = true,
               diagnosticMode = "openFilesOnly",
               useLibraryCodeForTypes = true,
+              diagnosticSeverityOverrides = {
+                -- basedpyright-only rules (no mypy equivalent)
+                reportAny = "information",
+                reportExplicitAny = "information",
+                reportUnknownVariableType = "information",
+                reportUnknownMemberType = "information",
+                reportUnknownParameterType = "information",
+                reportUnknownArgumentType = "information",
+                reportUnknownReturnType = "information",
+                reportUnknownLambdaType = "information",
+                reportUnusedCallResult = "information",
+                reportUninitializedInstanceVariable = "information",
+                reportImplicitOverride = "information",
+                reportDeprecated = "information",
+                reportShadowedImports = "information",
+                reportCallInDefaultInitializer = "information",
+                reportImplicitStringConcatenation = "information",
+                reportMissingSuperCall = "information",
+                reportPropertyTypeMismatch = "information",
+                reportUnnecessaryTypeIgnoreComment = "information",
+                reportUntypedFunctionDecorator = "information",
+                reportUntypedClassDecorator = "information",
+                reportUntypedNamedTuple = "information",
+                reportTypeCommentUsage = "information",
+                reportMissingModuleSource = "information",
+                reportIncompleteStub = "information",
+                -- mypy relaxations from pyproject.toml (strict=true with overrides)
+                reportMissingParameterType = "information", -- disallow_untyped_defs = false
+                reportMissingReturnType = "information", -- disallow_untyped_defs = false
+                reportUntypedBaseClass = "information", -- disallow_subclassing_any = false
+                reportMissingTypeArgument = "information", -- disallow_any_generics = false
+                -- ruff handles these (avoid duplicate diagnostics)
+                reportUnusedImport = "information",
+                reportUnusedVariable = "information",
+                reportUnusedExpression = "information",
+              },
             },
           },
         },
