@@ -73,6 +73,7 @@ return {
     servers = {
       "basedpyright",
       "pyright",
+      "pylsp",
       "ruff",
       "marksman",
     },
@@ -164,6 +165,52 @@ return {
           },
         },
       },
+      pylsp = {
+        autostart = false, -- toggle on with <Leader>lpr when needed for refactoring
+        before_init = function(_, config)
+          local python_path = detect_python_path(config.root_dir)
+          config.settings = config.settings or {}
+          config.settings.pylsp = config.settings.pylsp or {}
+          config.settings.pylsp.plugins = config.settings.pylsp.plugins or {}
+          config.settings.pylsp.plugins.jedi = { environment = python_path }
+        end,
+        settings = {
+          pylsp = {
+            plugins = {
+              -- disable features handled by basedpyright/ruff
+              pycodestyle = { enabled = false },
+              pyflakes = { enabled = false },
+              mccabe = { enabled = false },
+              autopep8 = { enabled = false },
+              yapf = { enabled = false },
+              rope_completion = { enabled = false },
+              jedi_completion = { enabled = false },
+              jedi_definition = { enabled = false },
+              jedi_hover = { enabled = false },
+              jedi_references = { enabled = false },
+              jedi_signature_help = { enabled = false },
+              jedi_symbols = { enabled = false },
+              -- rope: unique refactoring capabilities
+              pylsp_rope = {
+                enabled = true,
+                -- disable features covered by ruff or refactoring.nvim
+                organize_imports = false,
+                extract_method = false,
+                extract_global_method = false,
+                extract_variable = false,
+                extract_global_variable = false,
+                -- keep unique rope features
+                introduce_parameter = true,
+                convert_local_to_field = true,
+                use_function = true,
+                generate_code = true,
+                inline = true,
+              },
+              rope_rename = { enabled = true },  -- rename symbols and modules
+            },
+          },
+        },
+      },
       ruff = {
         capabilities = {
           general = {
@@ -234,6 +281,21 @@ return {
             vim.notify("Switched to pyright (lenient)", vim.log.levels.INFO)
           end,
           desc = "LSP: lenient (pyright)",
+        },
+        ["<Leader>lpr"] = {
+          function()
+            local clients = vim.lsp.get_clients { name = "pylsp" }
+            if #clients > 0 then
+              for _, client in ipairs(clients) do
+                client:stop()
+              end
+              vim.notify("pylsp stopped", vim.log.levels.INFO)
+            else
+              vim.cmd "LspStart pylsp"
+              vim.notify("pylsp started (rope refactoring)", vim.log.levels.INFO)
+            end
+          end,
+          desc = "Toggle pylsp (rope refactoring)",
         },
       },
     },
