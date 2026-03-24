@@ -7,12 +7,12 @@ return {
   "AstroNvim/astrocommunity",
   { import = "astrocommunity.pack.lua" },
   { import = "astrocommunity.pack.rust" },
-  -- { import = "astrocommunity.pack.python-ruff" },
   { import = "astrocommunity.git.diffview-nvim" },
   { import = "astrocommunity.git.neogit" },
   { import = "astrocommunity.git.gist-nvim" },
   { import = "astrocommunity.motion.flash-nvim" },
   { import = "astrocommunity.test.neotest" },
+  -- { import = "astrocommunity.debugging.nvim-dap-python" },
   { import = "astrocommunity.markdown-and-latex.glow-nvim" },
   -- import any community contributed plugins here
 }

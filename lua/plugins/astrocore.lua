@@ -54,6 +54,21 @@ return {
       },
     },
     commands = {
+      TabDir = {
+        function(opts)
+          local dir = opts.args
+          if vim.fn.isdirectory(dir) == 0 then
+            vim.notify("Not a directory: " .. dir, vim.log.levels.ERROR)
+            return
+          end
+          vim.cmd "tabnew"
+          vim.cmd("tcd " .. vim.fn.fnameescape(dir))
+          vim.cmd("edit " .. vim.fn.fnameescape(dir))
+        end,
+        nargs = 1,
+        complete = "dir",
+        desc = "Open directory in new tab with its own working directory",
+      },
       CommitMsg = {
         function(opts)
           local pr_num = opts.args
