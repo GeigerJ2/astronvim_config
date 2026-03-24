@@ -106,26 +106,18 @@ return {
       function() require("octo.utils").create_base_search_command { include_current_repo = true } end,
       desc = "Search GitHub",
     },
-    -- Jump to local file at current line in next tab
+    -- Jump to local file at current line in a new tab
     {
       "<localleader>of",
       function()
         local bufname = vim.api.nvim_buf_get_name(0)
         local line = vim.api.nvim_win_get_cursor(0)[1]
-
-        print("DEBUG - Full buffer name: " .. bufname)
-
         local filepath = nil
 
-        -- Check if it's already a local file path (use_local_fs = true)
         if bufname:match "^/" or bufname:match "^%a:" then
-          -- It's already a local file path
           filepath = bufname
-          print "DEBUG - Already a local file"
         else
-          -- It's an octo:// buffer, extract the path
           local cwd = vim.fn.getcwd()
-
           filepath = bufname:match "octo://[^/]+/[^/]+/pull/%d+/(.+)$"
             or bufname:match "octo://.*review_diff.*//([^%?]+)"
             or bufname:match "octo://.*//(.+)$"
@@ -138,54 +130,16 @@ return {
           end
         end
 
-        if filepath then
-          print("DEBUG - Filepath: " .. filepath)
-
-          -- Check if file exists and is readable
-          if vim.fn.filereadable(filepath) == 1 then
-            print "DEBUG - File is readable"
-
-            -- Check if buffer is modifiable
-            local is_modifiable = vim.bo[0].modifiable
-            print("DEBUG - Current buffer modifiable: " .. tostring(is_modifiable))
-
-            -- If we're already in the local file and it's not modifiable, make it so
-            if bufname == filepath and not is_modifiable then
-              vim.bo[0].modifiable = true
-              vim.notify("Made buffer modifiable", vim.log.levels.INFO)
-            else
-              -- Open in next tab
-              local current_tab = vim.api.nvim_get_current_tabpage()
-              vim.cmd "tabnext"
-
-              if vim.api.nvim_get_current_tabpage() == current_tab then vim.cmd "tabnew" end
-
-              vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-              vim.api.nvim_win_set_cursor(0, { line, 0 })
-              vim.cmd "normal! zz"
-            end
-          else
-            vim.notify("File not readable: " .. filepath, vim.log.levels.ERROR)
-          end
+        if filepath and vim.fn.filereadable(filepath) == 1 then
+          vim.cmd "tabnew"
+          vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+          vim.api.nvim_win_set_cursor(0, { line, 0 })
+          vim.cmd "normal! zz"
         else
-          vim.notify("Could not determine file path. Buffer: " .. bufname, vim.log.levels.WARN)
+          vim.notify("Could not open file: " .. (filepath or bufname), vim.log.levels.WARN)
         end
       end,
-      desc = "Octo: Jump to file in next tab (or make modifiable)",
-    },
-    -- Make current buffer modifiable
-    {
-      "<localleader>om",
-      function()
-        local is_modifiable = vim.bo[0].modifiable
-        if not is_modifiable then
-          vim.bo[0].modifiable = true
-          vim.notify("Buffer is now modifiable", vim.log.levels.INFO)
-        else
-          vim.notify("Buffer is already modifiable", vim.log.levels.INFO)
-        end
-      end,
-      desc = "Octo: Make buffer modifiable",
+      desc = "Octo: Jump to file in new tab",
     },
     -- Alternative: open in split
     {
