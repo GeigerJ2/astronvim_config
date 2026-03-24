@@ -121,6 +121,8 @@ return {
           end,
           desc = "Edit commit message (scratch)",
         },
+        ["<leader>fp"] = false, -- free <leader>fp for copy-file-path plugin
+        ["<leader>fj"] = { function() require("telescope").extensions.projects.projects {} end, desc = "Find projects" },
         ["<leader>f<CR>"] = { "<cmd>Telescope resume<cr>", desc = "Resume previous search" },
         ["<leader>lf"] = {
           function()

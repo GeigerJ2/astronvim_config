@@ -101,7 +101,6 @@ return {
               autoSearchPaths = true,
               diagnosticMode = "openFilesOnly",
               useLibraryCodeForTypes = true,
-              exclude = { "**/*.pyi" },
               diagnosticSeverityOverrides = {
                 -- basedpyright-only rules (no mypy equivalent)
                 reportAny = "information",
@@ -160,7 +159,6 @@ return {
               useLibraryCodeForTypes = true,
               autoImportCompletions = true,
               diagnosticMode = "openFilesOnly",
-              exclude = { "**/*.pyi" },
             },
           },
         },
