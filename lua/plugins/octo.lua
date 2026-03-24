@@ -61,6 +61,12 @@ return {
               pcall(vim.cmd.doau, [[BufEnter]])
               pcall(vim.cmd.diffthis)
               pcall(vim.cmd.exec, [["normal! \<c-y>"]])
+              -- Wrap long lines with smooth scrolling so both diff
+              -- windows stay visually aligned (like GitHub's web UI)
+              vim.wo[winid].wrap = true
+              vim.wo[winid].linebreak = true
+              vim.wo[winid].smoothscroll = true
+              vim.wo[winid].breakindent = true
             end)
             break
           end
@@ -216,15 +222,22 @@ return {
       end,
       desc = "Octo: Open file in split",
     },
-    -- Toggle line wrap
+    -- Toggle line wrap on all diff windows in current tab
     {
       "<localleader>ow",
       function()
-        vim.wo.wrap = not vim.wo.wrap
-        local status = vim.wo.wrap and "enabled" or "disabled"
-        vim.notify("Line wrap " .. status, vim.log.levels.INFO)
+        local new_wrap = not vim.wo.wrap
+        for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+          if vim.api.nvim_win_is_valid(winid) and vim.wo[winid].diff then
+            vim.wo[winid].wrap = new_wrap
+            vim.wo[winid].linebreak = new_wrap
+            vim.wo[winid].smoothscroll = new_wrap
+            vim.wo[winid].breakindent = new_wrap
+          end
+        end
+        vim.notify("Line wrap " .. (new_wrap and "enabled" or "disabled"), vim.log.levels.INFO)
       end,
-      desc = "Octo: Toggle line wrap",
+      desc = "Octo: Toggle line wrap (both windows)",
     },
   },
   dependencies = {
