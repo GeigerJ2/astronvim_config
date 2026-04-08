@@ -1,24 +1,24 @@
 return {}
+-- {
 --   "olimorris/codecompanion.nvim",
+--   event = "VeryLazy",
 --   dependencies = {
 --     "nvim-lua/plenary.nvim",
 --     "nvim-treesitter/nvim-treesitter",
 --   },
 --   opts = {
---     -- NOTE: The log_level is in `opts.opts`
---     opts = {
---       log_level = "DEBUG", -- or "TRACE"
+--     adapters = {
+--       anthropic = function()
+--         return require("codecompanion.adapters").extend("anthropic", {
+--           env = {
+--             api_key = "cmd:pass anthropic/api-key",
+--           },
+--         })
+--       end,
+--     },
+--     strategies = {
+--       chat = { adapter = "anthropic" },
+--       inline = { adapter = "anthropic" },
 --     },
 --   },
---   config = function()
---     require("codecompanion").setup {
---       adapters = {
---         anthropic = require("codecompanion.adapters").use("anthropic", {
---           env = {
---             api_key = "ANTHROPIC_API_KEY",
---           },
---         }),
---       },
---     }
---   end,
 -- }

@@ -14,6 +14,7 @@ return {
   { import = "astrocommunity.test.neotest" },
   -- { import = "astrocommunity.debugging.nvim-dap-python" },
   { import = "astrocommunity.markdown-and-latex.glow-nvim" },
+  { import = "astrocommunity.recipes.auto-session-restore" },
   -- import any community contributed plugins here
 }
 -- import/override with your plugins folder

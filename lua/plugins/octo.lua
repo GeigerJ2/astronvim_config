@@ -1,6 +1,7 @@
 ---@type LazySpec
 return {
-  "pwntester/octo.nvim",
+  dir = "/home/geiger_j/dev/lua/octo.nvim.worktrees/1460-allow-comments-outside-diff-hunks",
+  name = "octo.nvim",
   cmd = "Octo",
   opts = {
     use_local_fs = true, -- Use local files on right side of reviews
@@ -31,6 +32,17 @@ return {
   },
   config = function(_, opts)
     require("octo").setup(opts)
+
+    -- :OctoPrEditCurrent — edit the PR for the current branch (no number needed)
+    vim.api.nvim_create_user_command('OctoPrEditCurrent', function()
+      local result = vim.fn.system('gh pr view --json number -q .number')
+      local pr_number = vim.trim(result)
+      if pr_number ~= '' and tonumber(pr_number) then
+        vim.cmd('Octo pr edit ' .. pr_number)
+      else
+        vim.notify('No PR found for current branch', vim.log.levels.WARN)
+      end
+    end, {})
 
     -- Show filename in winbar on octo:// buffers so they align vertically
     -- with the right-side local file that has barbecue's winbar.
@@ -100,6 +112,11 @@ return {
       "<localleader>on",
       "<CMD>Octo notification list<CR>",
       desc = "List GitHub Notifications",
+    },
+    {
+      "<localleader>oe",
+      "<CMD>OctoPrEditCurrent<CR>",
+      desc = "Octo: Edit current branch PR",
     },
     {
       "<localleader>os",

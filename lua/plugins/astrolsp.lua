@@ -101,6 +101,13 @@ return {
               autoSearchPaths = true,
               diagnosticMode = "openFilesOnly",
               useLibraryCodeForTypes = true,
+              inlayHints = {
+                variableTypes = true,
+                callArgumentNames = true,
+                callArgumentNamesMatching = true,
+                functionReturnTypes = true,
+                genericTypes = true,
+              },
               diagnosticSeverityOverrides = {
                 -- basedpyright-only rules (no mypy equivalent)
                 reportAny = "information",
