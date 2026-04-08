@@ -55,7 +55,6 @@ return {
       codelens = true, -- enable/disable codelens refresh on start
       inlay_hints = true, -- enable/disable inlay hints on start
       semantic_tokens = true, -- enable/disable semantic token highlighting
-      fold = true, -- enable LSP folding
     },
     -- customize lsp formatting options
     formatting = {
@@ -239,7 +238,7 @@ return {
           event = { "InsertLeave", "BufEnter" },
           desc = "Refresh codelens (buffer)",
           callback = function(args)
-            if require("astrolsp").config.features.codelens then vim.lsp.codelens.refresh { bufnr = args.buf } end
+            if require("astrolsp").config.features.codelens then vim.lsp.codelens.enable(true, { bufnr = args.buf }) end
           end,
         },
       },
@@ -270,9 +269,9 @@ return {
         ["<Leader>lps"] = {
           function()
             for _, client in ipairs(vim.lsp.get_clients { name = "pyright" }) do
-              client:stop()
+              vim.lsp.stop(client.id)
             end
-            vim.cmd "LspStart basedpyright"
+            vim.lsp.enable("basedpyright")
             vim.notify("Switched to basedpyright (strict)", vim.log.levels.INFO)
           end,
           desc = "LSP: strict (basedpyright)",
@@ -280,9 +279,9 @@ return {
         ["<Leader>lpl"] = {
           function()
             for _, client in ipairs(vim.lsp.get_clients { name = "basedpyright" }) do
-              client:stop()
+              vim.lsp.stop(client.id)
             end
-            vim.cmd "LspStart pyright"
+            vim.lsp.enable("pyright")
             vim.notify("Switched to pyright (lenient)", vim.log.levels.INFO)
           end,
           desc = "LSP: lenient (pyright)",
@@ -292,11 +291,11 @@ return {
             local clients = vim.lsp.get_clients { name = "pylsp" }
             if #clients > 0 then
               for _, client in ipairs(clients) do
-                client:stop()
+                vim.lsp.stop(client.id)
               end
               vim.notify("pylsp stopped", vim.log.levels.INFO)
             else
-              vim.cmd "LspStart pylsp"
+              vim.lsp.enable("pylsp")
               vim.notify("pylsp started (rope refactoring)", vim.log.levels.INFO)
             end
           end,

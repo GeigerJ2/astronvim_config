@@ -1,7 +1,7 @@
 -- Python LSP and linter configuration
 return {
   {
-    "williamboman/mason-lspconfig.nvim",
+    "mason-org/mason-lspconfig.nvim",
     opts = {
       ensure_installed = { "pyright", "basedpyright" },
     },

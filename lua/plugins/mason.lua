@@ -9,17 +9,48 @@ return {
     opts = {
       -- Make sure to use the names found in `:Mason`
       ensure_installed = {
-        -- install language servers
+        -- language servers
         "lua-language-server",
+        "basedpyright",
+        "pyright",
+        "python-lsp-server",
+        "ruff",
+        "marksman",
+        "bash-language-server",
+        "clangd",
+        "fish-lsp",
+        "gopls",
+        "json-lsp",
+        "rust-analyzer",
+        "taplo",
+        "yaml-language-server",
 
-        -- install formatters
+        -- formatters
         "stylua",
+        "fixjson",
+        "prettierd",
+        "shellharden",
+        "tex-fmt",
+        "yamlfmt",
 
-        -- install debuggers
+        -- linters
+        "mypy",
+        "selene",
+        "luacheck",
+        "shellcheck",
+        "yamllint",
+
+        -- debuggers
         "debugpy",
+        "codelldb",
+        "bash-debug-adapter",
 
-        -- install any other package
-        "tree-sitter-cli",
+        -- other
+        "ast-grep",
+        "biome",
+        "jq",
+
+        -- tree-sitter-cli installed via cargo (mason's binary needs glibc 2.39)
       },
     },
   },
