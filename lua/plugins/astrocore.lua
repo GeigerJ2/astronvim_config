@@ -105,6 +105,42 @@ return {
       n = {
         -- second key is the lefthand side of the map
 
+        -- peek fold content in scrollable floating window
+        ["zp"] = {
+          function()
+            local line = vim.fn.line "."
+            if vim.fn.foldclosed(line) == -1 then return end
+            local fold_start = vim.fn.foldclosed(line)
+            local fold_end = vim.fn.foldclosedend(line)
+            local lines = vim.api.nvim_buf_get_lines(0, fold_start - 1, fold_end, false)
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+            local ft = vim.bo.filetype
+            vim.bo[buf].filetype = ft
+            vim.bo[buf].modifiable = false
+            pcall(vim.treesitter.start, buf, vim.treesitter.language.get_lang(ft) or ft)
+            local win_width = vim.api.nvim_win_get_width(0)
+            local height = math.min(#lines, 20)
+            local win = vim.api.nvim_open_win(buf, true, {
+              relative = "win",
+              win = 0,
+              row = vim.fn.winline(),
+              col = 0,
+              width = win_width - 2,
+              height = height,
+              style = "minimal",
+              border = "rounded",
+            })
+            for _, key in ipairs { "q", "<Esc>", "zp" } do
+              vim.keymap.set("n", key, function()
+                pcall(vim.api.nvim_win_close, win, true)
+                pcall(vim.api.nvim_buf_delete, buf, { force = true })
+              end, { buffer = buf, nowait = true })
+            end
+          end,
+          desc = "Peek fold",
+        },
+
         -- navigate buffer tabs
         ["]b"] = { function() require("astrocore.buffer").nav(vim.v.count1) end, desc = "Next buffer" },
         ["[b"] = { function() require("astrocore.buffer").nav(-vim.v.count1) end, desc = "Previous buffer" },
