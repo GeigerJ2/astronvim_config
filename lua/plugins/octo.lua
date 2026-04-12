@@ -44,6 +44,23 @@ return {
       end
     end, {})
 
+    -- :OctoPrChecksCurrent — show PR checks for the current branch without
+    -- first opening the PR buffer. Calls octo's M.pr_checks directly with a
+    -- minimal buffer-shaped table { number, repo }.
+    vim.api.nvim_create_user_command('OctoPrChecksCurrent', function()
+      local pr_number = vim.trim(vim.fn.system('gh pr view --json number -q .number'))
+      if pr_number == '' or not tonumber(pr_number) then
+        vim.notify('No PR found for current branch', vim.log.levels.WARN)
+        return
+      end
+      local repo = vim.trim(vim.fn.system('gh repo view --json nameWithOwner -q .nameWithOwner'))
+      if repo == '' then
+        vim.notify('Cannot determine repo', vim.log.levels.WARN)
+        return
+      end
+      require('octo.commands').pr_checks { number = tonumber(pr_number), repo = repo }
+    end, {})
+
     -- Show filename in winbar on octo:// buffers so they align vertically
     -- with the right-side local file that has barbecue's winbar.
     -- barbecue.lua skips octo:// buffers, so this winbar won't be overwritten.
@@ -117,6 +134,11 @@ return {
       "<localleader>oe",
       "<CMD>OctoPrEditCurrent<CR>",
       desc = "Octo: Edit current branch PR",
+    },
+    {
+      "<localleader>oc",
+      "<CMD>OctoPrChecksCurrent<CR>",
+      desc = "Octo: PR checks for current branch",
     },
     {
       "<localleader>os",

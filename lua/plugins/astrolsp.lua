@@ -71,8 +71,8 @@ return {
     -- basedpyright is the default; pyright is configured but not auto-started (toggle with <leader>lpl)
     servers = {
       "basedpyright",
-      "pyright",
-      "pylsp",
+      -- pyright and pylsp are NOT listed here; they are toggled on manually
+      -- via <Leader>lpl and <Leader>lpr (vim.lsp.enable has no autostart concept)
       "ruff",
       "marksman",
     },
@@ -228,7 +228,12 @@ return {
       },
     },
     -- customize how language servers are attached
-    handlers = {},
+    handlers = {
+      -- Prevent pyright and pylsp from auto-starting; they are toggled
+      -- manually via <Leader>lpl and <Leader>lpr
+      pyright = false,
+      pylsp = false,
+    },
     -- Configure buffer local auto commands to add when attaching a language server
     autocmds = {
       -- first key is the `augroup` to add the auto commands to (:h augroup)

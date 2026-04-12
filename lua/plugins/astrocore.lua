@@ -155,6 +155,7 @@ return {
           desc = "Close buffer from tabline",
         },
         ["<Leader>vb"] = { "<C-v>", desc = "Visual block mode" },
+        ["<Leader>|"] = { "<cmd>vsplit #<CR>", desc = "Vsplit with previous buffer" },
 
         -- tables with just a `desc` key will be registered with which-key if it's installed
         -- this is useful for naming menus

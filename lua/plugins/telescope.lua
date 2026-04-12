@@ -19,6 +19,11 @@ return {
         path = vim.fn.stdpath("data") .. "/databases/telescope_history.sqlite3",
         limit = 100,
       }
+      opts.defaults.layout_strategy = "flex"
+      opts.defaults.layout_config = vim.tbl_deep_extend("force", opts.defaults.layout_config or {}, {
+        width = 0.95,
+        height = 0.95,
+      })
       return opts
     end,
     -- Load the extension after telescope is set up

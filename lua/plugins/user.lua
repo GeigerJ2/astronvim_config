@@ -44,6 +44,12 @@ return {
           ["<C-\\>"] = "vsplit",
           ["<M-v>"] = "vsplit",
         },
+        layout = {
+          layout = {
+            width = 0.95,
+            height = 0.95,
+          },
+        },
       },
     },
   },

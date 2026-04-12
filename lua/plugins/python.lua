@@ -3,7 +3,10 @@ return {
   {
     "mason-org/mason-lspconfig.nvim",
     opts = {
-      ensure_installed = { "pyright", "basedpyright" },
+      -- Only list servers here that should auto-install AND auto-enable.
+      -- pyright and pylsp are installed via mason-tool-installer but
+      -- toggled on manually via <Leader>lpl / <Leader>lpr.
+      ensure_installed = { "basedpyright" },
     },
   },
   {
