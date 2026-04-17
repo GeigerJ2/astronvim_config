@@ -1,0 +1,57 @@
+From: geiger_j
+Subject: [PATCH] Add :Octo review threads command to browse all review threads
+
+Adds a new :Octo review threads subcommand that shows all review threads
+(pending, commented, approved, changes_requested) in the picker, not just
+pending ones like :Octo review comments does.
+
+---
+ lua/octo/commands.lua      | 3 +++
+ lua/octo/reviews/init.lua  | 19 +++++++++++++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/lua/octo/commands.lua b/lua/octo/commands.lua
+index cfcb677..4224319 100644
+--- a/lua/octo/commands.lua
++++ b/lua/octo/commands.lua
+@@ -802,6 +802,9 @@ function M.setup()
+       comments = context.within_review(function(current_review)
+         current_review:show_pending_comments()
+       end),
++      threads = context.within_review(function(current_review)
++        current_review:show_all_threads()
++      end),
+       submit = function()
+         reviews.submit_review()
+       end,
+diff --git a/lua/octo/reviews/init.lua b/lua/octo/reviews/init.lua
+index 03b1099..d8d22c1 100644
+--- a/lua/octo/reviews/init.lua
++++ b/lua/octo/reviews/init.lua
+@@ -396,6 +396,25 @@ function Review:show_pending_comments()
+   end
+ end
+
++function Review:show_all_threads()
++  local all_threads = {}
++  for _, thread in
++    ipairs(vim.tbl_values(self.threads) --[[@as octo.ReviewThread[] ]])
++  do
++    for _, comment in ipairs(thread.comments.nodes) do
++      if not utils.is_blank(utils.trim(comment.body)) then
++        table.insert(all_threads, thread)
++        break
++      end
++    end
++  end
++  if #all_threads == 0 then
++    utils.error "No review threads found"
++    return
++  end
++  require("octo.picker").pending_threads(all_threads)
++end
++
+ ---@param isSuggestion boolean
+ function Review:add_comment(isSuggestion)
+   -- check if we are on the diff layout and return early if not
+--

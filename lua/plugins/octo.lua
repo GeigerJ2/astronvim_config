@@ -1,6 +1,6 @@
 ---@type LazySpec
 return {
-  dir = "/home/geiger_j/dev/lua/octo.nvim.worktrees/1460-allow-comments-outside-diff-hunks",
+  dir = "/home/geiger_j/dev/lua/octo.nvim",
   name = "octo.nvim",
   cmd = "Octo",
   opts = {
@@ -214,6 +214,41 @@ return {
         end
       end,
       desc = "Octo: Open file in split",
+    },
+    -- Maximize the right (local file) pane, turning off diff mode.
+    -- Octo's ensure_layout will restore the two-pane diff on file switch.
+    {
+      "<localleader>om",
+      function()
+        local reviews = require "octo.reviews"
+        local current_review = reviews.get_current_review()
+        if not current_review or not current_review.layout then
+          vim.notify("No active review", vim.log.levels.WARN)
+          return
+        end
+        local layout = current_review.layout
+        local right_win = layout.right_winid
+        local left_win = layout.left_winid
+
+        if not vim.api.nvim_win_is_valid(right_win) then return end
+
+        -- If left window exists, close it + file panel and diffoff
+        if vim.api.nvim_win_is_valid(left_win) then
+          vim.api.nvim_set_current_win(right_win)
+          vim.cmd "diffoff"
+          -- Close file panel first (so it doesn't interfere)
+          if layout.file_panel and layout.file_panel:is_open() then
+            layout.file_panel:close()
+          end
+          vim.api.nvim_win_close(left_win, true)
+        else
+          -- Restore: ensure_layout recreates missing windows and re-diffs
+          layout:ensure_layout()
+          local file = layout:get_current_file()
+          if file then layout:set_current_file(file) end
+        end
+      end,
+      desc = "Octo: Toggle full-screen file view",
     },
     -- Toggle line wrap on all diff windows in current tab
     {
