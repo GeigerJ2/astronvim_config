@@ -4,7 +4,9 @@ return {
     "declancm/maximize.nvim",
     config = function() require("maximize").setup() end,
     keys = {
-      { "<leader>z", "<cmd>lua require('maximize').toggle()<cr>", desc = "Toggle Maximize" },
+      -- `<Leader>Z` (capital) avoids the `timeoutlen` delay from
+      -- `<Leader>z{j,k,z}` fold mappings in `polish.lua`.
+      { "<leader>Z", "<cmd>lua require('maximize').toggle()<cr>", desc = "Toggle Maximize" },
     },
   },
 }

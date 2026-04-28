@@ -3,7 +3,9 @@ return {
   cmd = { "BaleiaColorize", "BaleiaLogs" },
   keys = {
     {
-      "<leader>uA",
+      -- `<Leader>uX` (eXcape codes). Avoids AstroNvim's default
+      -- `<Leader>uA` = `astrocore.toggles.autochdir()`.
+      "<leader>uX",
       function()
         local baleia = require("baleia").setup()
         baleia.once(vim.api.nvim_get_current_buf())

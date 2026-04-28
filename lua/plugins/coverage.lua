@@ -6,11 +6,14 @@ return {
     "nvim-lua/plenary.nvim",
   },
   keys = {
+    -- `<Leader>tT` and `<Leader>tL` are capitalized to avoid shadowing
+    -- AstroNvim defaults `<Leader>tt` (ToggleTerm toggle) and `<Leader>tl`
+    -- (lazygit). Lowercase `tc`, `tC`, `ts` don't collide with anything.
     { "<leader>tc", "<cmd>Coverage<cr>", desc = "Load coverage" },
     { "<leader>tC", "<cmd>CoverageHide<cr>", desc = "Hide coverage" },
     { "<leader>ts", "<cmd>CoverageSummary<cr>", desc = "Coverage summary" },
-    { "<leader>tl", "<cmd>CoverageLoad<cr>", desc = "Load coverage file" },
-    { "<leader>tt", "<cmd>CoverageToggle<cr>", desc = "Toggle coverage" },
+    { "<leader>tL", "<cmd>CoverageLoad<cr>", desc = "Load coverage file" },
+    { "<leader>tT", "<cmd>CoverageToggle<cr>", desc = "Toggle coverage" },
   },
   config = function()
     require("coverage").setup({

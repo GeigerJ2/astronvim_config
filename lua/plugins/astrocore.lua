@@ -176,7 +176,11 @@ return {
         ["<leader>fp"] = false, -- free <leader>fp for copy-file-path plugin
         ["<leader>fj"] = { function() require("telescope").extensions.projects.projects {} end, desc = "Find projects" },
         ["<leader>f<CR>"] = { "<cmd>Telescope resume<cr>", desc = "Resume previous search" },
-        ["<leader>lf"] = {
+        -- Filtered document-symbol pickers. Capitalized to avoid shadowing
+        -- AstroNvim's default `<Leader>lf` (vim.lsp.buf.format) and
+        -- `<Leader>lc` is intentionally left free. Use `<Leader>ls` for the
+        -- unfiltered symbols picker.
+        ["<leader>lF"] = {
           function()
             require("telescope.builtin").lsp_document_symbols {
               symbols = { "function", "method" },
@@ -184,7 +188,7 @@ return {
           end,
           desc = "Search functions/methods",
         },
-        ["<leader>lc"] = {
+        ["<leader>lC"] = {
           function()
             require("telescope.builtin").lsp_document_symbols {
               symbols = { "class", "struct" },
