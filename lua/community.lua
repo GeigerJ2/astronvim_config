@@ -8,6 +8,7 @@ return {
   { import = "astrocommunity.pack.lua" },
   { import = "astrocommunity.pack.rust" },
   { import = "astrocommunity.git.diffview-nvim" },
+  { "sindrets/diffview.nvim", cmd = { "DiffviewOpen", "DiffviewFileHistory", "DiffviewLog", "DiffviewClose", "DiffviewToggleFiles", "DiffviewFocusFiles", "DiffviewRefresh" } },
   { import = "astrocommunity.git.neogit" },
   { import = "astrocommunity.git.gist-nvim" },
   { import = "astrocommunity.motion.flash-nvim" },
