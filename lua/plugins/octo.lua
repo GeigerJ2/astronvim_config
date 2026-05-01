@@ -1,6 +1,6 @@
 ---@type LazySpec
 return {
-  dir = "/home/geiger_j/dev/lua/octo.nvim",
+  dir = "/home/geiger_j/dev/lua/octo.nvim.worktrees/fix-escape-graphql-block-string",
   name = "octo.nvim",
   cmd = "Octo",
   opts = {

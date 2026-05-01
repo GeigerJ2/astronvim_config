@@ -67,11 +67,13 @@ return {
         function() require("refactoring").debug.cleanup() end,
         desc = "Debug print cleanup",
       },
-      -- Telescope picker for all refactors
+      -- Telescope picker for all refactors.
+      -- `<Leader>rr` is intentionally left to iron.nvim (REPL restart);
+      -- use `<Leader>rm` ("refactor menu") in normal or visual mode instead.
       {
-        "<Leader>rr",
+        "<Leader>rm",
         function() require("telescope").extensions.refactoring.refactors() end,
-        mode = "v",
+        mode = { "n", "v" },
         desc = "Refactoring menu",
       },
     },

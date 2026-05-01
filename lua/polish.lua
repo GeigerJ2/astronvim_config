@@ -106,41 +106,186 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Persist fold state across sessions (uses :mkview / :loadview).
--- Saves automatically on multiple events; restores on multiple events.
--- Drop "curdir" so views are not tied to the cwd they were created in
--- (e.g. opening the same file from a different worktree still loads folds).
-vim.opt.viewoptions:remove "curdir"
+-- Persist closed-fold state across sessions.
+--
+-- Strategy: snapshot every closed fold as `{start_line, end_line, text}`
+-- into a JSON sidecar in stdpath('state')/fold-state/.  On load, switch
+-- the buffer to foldmethod=manual and recreate the folds from the saved
+-- ranges, because :foldclose / zc on a nested-fold line always targets
+-- the OUTERMOST containing fold (under expr-method), not the inner
+-- section the user actually closed.
+
+local fold_state_dir = vim.fn.stdpath("state") .. "/fold-state"
+vim.fn.mkdir(fold_state_dir, "p")
 
 local fold_persistence = vim.api.nvim_create_augroup("persistent_folds", { clear = true })
 
-local function should_persist()
-  return vim.bo.buftype == "" and vim.bo.modifiable and vim.fn.expand "%:p" ~= "" and vim.fn.filereadable(vim.fn.expand "%:p") == 1
+local function should_persist(bufnr)
+  if bufnr == nil or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
+  if not vim.api.nvim_buf_is_valid(bufnr) then return false end
+  local name = vim.api.nvim_buf_get_name(bufnr)
+  return vim.bo[bufnr].buftype == ""
+    and vim.bo[bufnr].modifiable
+    and name ~= ""
+    and vim.fn.filereadable(name) == 1
 end
 
--- Save on any event that signals "buffer is leaving the screen or being written".
--- mkview! forces overwrite (the bang matters — without it, an existing view file
--- can prevent the new one from being written depending on nvim version).
+local function fold_state_path(bufnr)
+  if bufnr == nil or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
+  local file = vim.api.nvim_buf_get_name(bufnr)
+  if file == "" then return nil end
+  local hash = vim.fn.sha256(file):sub(1, 16)
+  local basename = vim.fn.fnamemodify(file, ":t")
+  return string.format("%s/%s_%s.json", fold_state_dir, basename, hash)
+end
+
+-- Walk the buffer and record every closed fold's range and headline.
+local function collect_closed_folds(bufnr)
+  local closed = {}
+  local last = vim.api.nvim_buf_line_count(bufnr)
+  local lnum = 1
+  while lnum <= last do
+    local fold_start = vim.fn.foldclosed(lnum)
+    if fold_start == lnum then
+      local fold_end = vim.fn.foldclosedend(lnum)
+      local text = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false)[1] or ""
+      table.insert(closed, { start_line = lnum, end_line = fold_end, text = text })
+      lnum = (fold_end > 0 and fold_end or lnum) + 1
+    else
+      lnum = lnum + 1
+    end
+  end
+  return closed
+end
+
+local function locate_fold_start(bufnr, entry)
+  local total = vim.api.nvim_buf_line_count(bufnr)
+  local at = function(lnum)
+    if lnum < 1 or lnum > total then return nil end
+    return vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false)[1]
+  end
+  local saved_line = entry.start_line or entry.line
+  if at(saved_line) == entry.text then return saved_line end
+  for offset = 1, 50 do
+    if at(saved_line - offset) == entry.text then return saved_line - offset end
+    if at(saved_line + offset) == entry.text then return saved_line + offset end
+  end
+  return nil
+end
+
+local function save_fold_state(bufnr)
+  if bufnr == nil or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
+  if not should_persist(bufnr) then return end
+  local path = fold_state_path(bufnr)
+  if path == nil then return end
+  local winid = vim.fn.bufwinid(bufnr)
+  if winid == -1 then return end
+
+  local closed = vim.api.nvim_win_call(winid, function() return collect_closed_folds(bufnr) end)
+  local fh = io.open(path, "w")
+  if fh == nil then return end
+  fh:write(vim.json.encode { closed = closed })
+  fh:close()
+end
+
+local function apply_fold_state(target_buf, state)
+  if not vim.api.nvim_buf_is_valid(target_buf) then return end
+  local winid = vim.fn.bufwinid(target_buf)
+  if winid == -1 then return end
+
+  -- Switch foldmethod=manual and lower foldlevel for the window.
+  -- AstroNvim sets foldlevel=99 globally, which auto-opens any fold at
+  -- level <= 99 — including the manual level-1 folds we're about to
+  -- create.  Drop it to 0 so the closed state set by :N,Mfoldclose
+  -- isn't overridden on the next redraw.  vim.wo inside nvim_win_call
+  -- can be unreliable across versions, so use the explicit API.
+  vim.api.nvim_set_option_value("foldmethod", "manual", { win = winid })
+  vim.api.nvim_set_option_value("foldlevel", 0, { win = winid })
+
+  vim.api.nvim_win_call(winid, function()
+    pcall(vim.cmd, "silent! normal! zE")
+    for _, entry in ipairs(state.closed) do
+      local start_line = locate_fold_start(target_buf, entry)
+      if start_line ~= nil then
+        local saved_start = entry.start_line or entry.line
+        local saved_end = entry.end_line or saved_start
+        local end_line = saved_end + (start_line - saved_start)
+        local last = vim.api.nvim_buf_line_count(target_buf)
+        if end_line > last then end_line = last end
+        if end_line >= start_line then
+          -- `:N,Mfold` creates a manual fold (initially closed), but
+          -- AstroNvim's global `foldlevel=99` auto-opens any fold at
+          -- level <= 99 immediately after creation.  Re-close it with
+          -- `:N,Mfoldclose` — under foldmethod=manual there's no
+          -- nested ambiguity, so this targets exactly our fold.
+          if pcall(vim.cmd, string.format("%d,%dfold", start_line, end_line)) then
+            pcall(vim.cmd, string.format("%d,%dfoldclose", start_line, end_line))
+          end
+        end
+      end
+    end
+  end)
+end
+
+local function load_fold_state(bufnr)
+  if bufnr == nil or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
+  if not should_persist(bufnr) then return end
+  local path = fold_state_path(bufnr)
+  if path == nil or vim.fn.filereadable(path) == 0 then return end
+
+  local fh = io.open(path, "r")
+  if fh == nil then return end
+  local content = fh:read("*a")
+  fh:close()
+
+  local ok, state = pcall(vim.json.decode, content)
+  if not ok or type(state) ~= "table" or type(state.closed) ~= "table" then return end
+  if #state.closed == 0 then return end
+
+  local target_buf = bufnr
+  vim.schedule(function() apply_fold_state(target_buf, state) end)
+end
+
 vim.api.nvim_create_autocmd({ "BufWritePost", "BufLeave", "BufWinLeave", "BufHidden" }, {
   group = fold_persistence,
-  callback = function()
-    if should_persist() then pcall(vim.cmd, "silent! mkview!") end
-  end,
+  callback = function(args) save_fold_state(args.buf) end,
 })
 
--- Load on any event that signals "buffer is now visible / readable".
--- BufWinEnter alone misses the very first :e of a file in some cases.
-vim.api.nvim_create_autocmd({ "BufWinEnter", "BufReadPost" }, {
+vim.api.nvim_create_autocmd("VimLeavePre", {
   group = fold_persistence,
   callback = function()
-    if should_persist() then pcall(vim.cmd, "silent! loadview") end
+    for _, winid in ipairs(vim.api.nvim_list_wins()) do
+      local bufnr = vim.api.nvim_win_get_buf(winid)
+      vim.api.nvim_win_call(winid, function() save_fold_state(bufnr) end)
+    end
   end,
 })
 
--- Manual commands for debugging: :SaveFolds / :LoadFolds.
--- If these work but the autocmds don't, the issue is event timing, not mkview.
-vim.api.nvim_create_user_command("SaveFolds", function() vim.cmd "silent! mkview!" end, {})
-vim.api.nvim_create_user_command("LoadFolds", function() vim.cmd "silent! loadview" end, {})
+-- Auto-apply saved fold state on file open.  load_fold_state itself
+-- skips early when no JSON exists or its `closed` list is empty, so
+-- files without persisted folds keep their default (treesitter) folding.
+-- Note: applying *does* switch the buffer to foldmethod=manual + foldlevel=0
+-- (that's how the closed state is made to stick); to get treesitter folds
+-- back run `:setlocal foldmethod=expr | setlocal foldlevel=99`.
+vim.api.nvim_create_autocmd("BufReadPost", {
+  group = fold_persistence,
+  callback = function(args) load_fold_state(args.buf) end,
+})
+
+vim.api.nvim_create_user_command("SaveFolds", function() save_fold_state(0) end, {})
+vim.api.nvim_create_user_command("LoadFolds", function() load_fold_state(0) end, {})
+vim.api.nvim_create_user_command("ShowFoldState", function()
+  local path = fold_state_path(0)
+  if path == nil then
+    vim.notify("No file path for current buffer", vim.log.levels.WARN)
+    return
+  end
+  if vim.fn.filereadable(path) == 0 then
+    vim.notify("No saved fold state at " .. path, vim.log.levels.INFO)
+    return
+  end
+  vim.cmd("edit " .. vim.fn.fnameescape(path))
+end, { desc = "Open the JSON sidecar with this buffer's saved closed folds" })
 
 -- Fold all sections that do NOT contain the cursor, in a given line range.
 -- Walks each line, attempts `zc` (close innermost fold at line). If the closed
@@ -195,6 +340,29 @@ local function fold_below_cursor()
   fold_range_excluding_cursor(cursor + 1, vim.fn.line "$")
 end
 
+-- Recursively open every fold in the line range. Uses Ex `foldopen!`
+-- (range form), which is more efficient than walking with `zo` and works
+-- with any foldmethod since it only opens existing folds.
+local function unfold_range(start_line, end_line)
+  if start_line > end_line then return end
+  local saved_view = vim.fn.winsaveview()
+  pcall(vim.cmd, string.format("silent! %d,%dfoldopen!", start_line, end_line))
+  vim.fn.winrestview(saved_view)
+end
+
+local function unfold_above_cursor()
+  local cursor = vim.fn.line "."
+  if cursor <= 1 then return end
+  unfold_range(1, cursor - 1)
+end
+
+local function unfold_below_cursor()
+  unfold_range(vim.fn.line "." + 1, vim.fn.line "$")
+end
+
 vim.keymap.set("n", "<leader>zk", fold_above_cursor, { desc = "Fold all above cursor (level-aware)" })
 vim.keymap.set("n", "<leader>zj", fold_below_cursor, { desc = "Fold all below cursor (level-aware)" })
 vim.keymap.set("n", "<leader>zz", "zMzv", { desc = "Fold all but cursor's path (zMzv)" })
+vim.keymap.set("n", "<leader>zK", unfold_above_cursor, { desc = "Unfold all above cursor" })
+vim.keymap.set("n", "<leader>zJ", unfold_below_cursor, { desc = "Unfold all below cursor" })
+vim.keymap.set("n", "<leader>zZ", "zR", { desc = "Unfold everything (zR)" })
