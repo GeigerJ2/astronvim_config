@@ -23,6 +23,11 @@ return {
         select_next_entry = { lhs = "]q", desc = "move to next file" },
         select_prev_entry = { lhs = "[q", desc = "move to previous file" },
       },
+      submit_win = {
+        approve_review = { lhs = "<A-a>", desc = "approve review" },
+        comment_review = { lhs = "<A-m>", desc = "comment review" },
+        request_changes = { lhs = "<A-r>", desc = "request changes review" },
+      },
       file_panel = {
         next_entry = { lhs = "j", desc = "next file" },
         prev_entry = { lhs = "k", desc = "prev file" },
