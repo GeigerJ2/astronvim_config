@@ -11,16 +11,18 @@ local function detect_python_path(root_dir)
 
   local root = root_dir or vim.fn.getcwd()
 
-  -- 2. Check for local .venv in project root (uv/hatch/venv)
+  -- 2. Check for local .venv in project root (uv/plain venv)
   local local_venv = root .. "/.venv/bin/python"
   if vim.fn.executable(local_venv) == 1 then return local_venv end
 
-  -- 3. Check for hatch environments
-  local handle = io.popen("cd " .. root .. " && hatch env find 2>/dev/null")
-  if handle then
-    local hatch_path = handle:read("*a"):gsub("^%s*(.-)%s*$", "%1")
-    handle:close()
-    if hatch_path ~= "" then return hatch_path .. "/bin/python" end
+  -- 3. Check for hatch-style nested venvs (.venv/<env_name>/bin/python)
+  local venv_dir = root .. "/.venv"
+  if vim.fn.isdirectory(venv_dir) == 1 then
+    local entries = vim.fn.readdir(venv_dir)
+    for _, entry in ipairs(entries) do
+      local candidate = venv_dir .. "/" .. entry .. "/bin/python"
+      if vim.fn.executable(candidate) == 1 then return candidate end
+    end
   end
 
   -- 4. Check for uv managed environment
@@ -53,7 +55,7 @@ return {
     -- Configuration table of features provided by AstroLSP
     features = {
       codelens = true, -- enable/disable codelens refresh on start
-      inlay_hints = true, -- enable/disable inlay hints on start
+      inlay_hints = false, -- enable/disable inlay hints on start
       semantic_tokens = true, -- enable/disable semantic token highlighting
     },
     -- customize lsp formatting options
@@ -251,6 +253,14 @@ return {
     -- mappings to be set up on attaching of a language server
     mappings = {
       n = {
+        ["g<C-d>"] = {
+          function()
+            vim.cmd "vsplit"
+            vim.lsp.buf.definition()
+          end,
+          desc = "Go to definition in vsplit",
+          cond = "textDocument/definition",
+        },
         gD = {
           function() vim.lsp.buf.declaration() end,
           desc = "Declaration of current symbol",
