@@ -46,11 +46,23 @@ return {
         linebreak = true, -- Break at word boundaries
         showbreak = "↪ ", -- Show indicator for wrapped lines
         breakindent = true, -- Preserve indentation for wrapped
+        clipboard = "unnamedplus", -- yank goes to system clipboard automatically
       },
       g = { -- vim.g.<key>
         -- configure global vim variables (vim.g)
         -- NOTE: `mapleader` and `maplocalleader` must be set in the AstroNvim opts or before `lazy.setup`
         -- This can be found in the `lua/lazy_setup.lua` file
+        clipboard = {
+          name = "OSC 52",
+          copy = {
+            ["+"] = require("vim.ui.clipboard.osc52").copy "+",
+            ["*"] = require("vim.ui.clipboard.osc52").copy "*",
+          },
+          paste = {
+            ["+"] = function() return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" } end,
+            ["*"] = function() return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" } end,
+          },
+        },
       },
     },
     commands = {
@@ -248,11 +260,11 @@ return {
       v = {
         ["<Leader>fv"] = {
           function()
-            local saved = vim.fn.getreg('"')
-            vim.cmd('noau normal! "vy')
-            local selected = vim.fn.getreg("v")
+            local saved = vim.fn.getreg '"'
+            vim.cmd 'noau normal! "vy'
+            local selected = vim.fn.getreg "v"
             vim.fn.setreg('"', saved)
-            require("telescope.builtin").grep_string({ search = selected })
+            require("telescope.builtin").grep_string { search = selected }
           end,
           desc = "Search selected text",
         },

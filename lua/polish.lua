@@ -287,6 +287,43 @@ vim.api.nvim_create_user_command("ShowFoldState", function()
   vim.cmd("edit " .. vim.fn.fnameescape(path))
 end, { desc = "Open the JSON sidecar with this buffer's saved closed folds" })
 
+-- Walk up the treesitter tree from cursor to find the smallest node
+-- spanning at least two lines.  For markdown that's a `section`; for
+-- code it's typically a function / class / block.  Returns 1-indexed
+-- (start_line, end_line) or nil.
+local function ts_section_at_cursor()
+  local cursor_row = vim.fn.line "." - 1
+  local cursor_col = math.max(0, vim.fn.col "." - 1)
+  local ok, node = pcall(vim.treesitter.get_node, { pos = { cursor_row, cursor_col } })
+  if not ok or node == nil then return nil end
+  while node ~= nil do
+    local sr, _, er, _ = node:range()
+    if er > sr + 1 then return sr + 1, er end
+    node = node:parent()
+  end
+  return nil
+end
+
+-- `zc` fallback: when the normal-mode `zc` finds no fold at the cursor
+-- (the typical case in a buffer where fold persistence has switched
+-- foldmethod to manual and only the saved ranges have folds), use
+-- treesitter to discover the smallest enclosing section/definition
+-- and turn it into a closed manual fold.  Auto-save will pick it up
+-- on the next BufLeave / BufWritePost.
+vim.keymap.set("n", "zc", function()
+  local cursor = vim.fn.line "."
+  if pcall(vim.cmd, "silent! normal! zc") and vim.fn.foldclosed(cursor) ~= -1 then
+    return
+  end
+  local start_line, end_line = ts_section_at_cursor()
+  if start_line == nil then
+    vim.notify("zc: no fold or treesitter section at cursor", vim.log.levels.WARN)
+    return
+  end
+  pcall(vim.cmd, string.format("%d,%dfold", start_line, end_line))
+  pcall(vim.cmd, string.format("%d,%dfoldclose", start_line, end_line))
+end, { desc = "Close fold (fallback: treesitter section)" })
+
 -- Fold all sections that do NOT contain the cursor, in a given line range.
 -- Walks each line, attempts `zc` (close innermost fold at line). If the closed
 -- fold turns out to span the cursor, undoes with `zo` and moves on.
