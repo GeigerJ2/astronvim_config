@@ -3,6 +3,39 @@
 -- NOTE: We highly recommend setting up the Lua Language Server (`:LspInstall lua_ls`)
 --       as this provides autocomplete and documentation while editing
 
+-- Resolve the merge-base of HEAD against the PR's base branch.
+-- Tries `gh pr view` first, then falls back to upstream/main → origin/main → main.
+-- Returns the merge-base SHA as a trimmed string (or "" if everything fails).
+local function resolve_pr_merge_base()
+  local base_branch = vim.fn.system("gh pr view --json baseRefName -q .baseRefName 2>/dev/null"):gsub("\n", "")
+
+  if vim.v.shell_error ~= 0 or base_branch == "" then
+    -- Fallback: try upstream/main, then origin/main, then main
+    local base = vim.fn.system("git rev-parse --verify upstream/main 2>/dev/null"):gsub("\n", "")
+    if vim.v.shell_error ~= 0 then
+      base = vim.fn.system("git rev-parse --verify origin/main 2>/dev/null"):gsub("\n", "")
+      if vim.v.shell_error ~= 0 then
+        base = "main"
+      else
+        base = "origin/main"
+      end
+    else
+      base = "upstream/main"
+    end
+    base_branch = base
+  else
+    -- Prepend upstream/ or origin/ if needed
+    local _ = vim.fn.system("git rev-parse --verify upstream/" .. base_branch .. " 2>/dev/null"):gsub("\n", "")
+    if vim.v.shell_error ~= 0 then
+      base_branch = "origin/" .. base_branch
+    else
+      base_branch = "upstream/" .. base_branch
+    end
+  end
+
+  return vim.fn.system("git merge-base HEAD " .. base_branch):gsub("\n", "")
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrocore",
@@ -52,17 +85,66 @@ return {
         -- configure global vim variables (vim.g)
         -- NOTE: `mapleader` and `maplocalleader` must be set in the AstroNvim opts or before `lazy.setup`
         -- This can be found in the `lua/lazy_setup.lua` file
-        clipboard = {
-          name = "OSC 52",
-          copy = {
-            ["+"] = require("vim.ui.clipboard.osc52").copy "+",
-            ["*"] = require("vim.ui.clipboard.osc52").copy "*",
-          },
-          paste = {
-            ["+"] = function() return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" } end,
-            ["*"] = function() return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" } end,
-          },
-        },
+        -- Clipboard provider designed to "just work" across all our
+        -- attach contexts (local Konsole, SSH from WSL, with/without tmux).
+        --
+        -- Strategy at copy time, in order:
+        --   1. Inside tmux: bypass tmux's own OSC 52 forwarding (unreliable
+        --      on this server) and write the escape sequence directly to
+        --      every attached client's pty.
+        --   2. SSH'd (no tmux): write OSC 52 to /dev/tty so the bytes flow
+        --      through the SSH pty up to the user's terminal.
+        --   3. Truly local: prefer the native X/Wayland clipboard tool;
+        --      fall back to OSC 52 on /dev/tty if none available.
+        --
+        -- Rationale for /dev/tty rather than io.stderr: /dev/tty is always
+        -- the controlling terminal regardless of how stderr is wired.
+        clipboard = (function()
+          local function emit_osc(data)
+            local b64 = (vim.base64 and vim.base64.encode and vim.base64.encode(data))
+              or vim.fn.system({ "base64", "-w0" }, data):gsub("[\n\r]", "")
+            return "\027]52;c;" .. b64 .. "\027\\"
+          end
+          local function write_tty(path, payload)
+            local fd = io.open(path, "w")
+            if fd then
+              fd:write(payload)
+              fd:close()
+            end
+          end
+          local function copy(_)
+            return function(lines, _)
+              local data = table.concat(lines, "\n")
+              local osc = emit_osc(data)
+              -- OSC 52 channel: route to attached tmux clients if in tmux,
+              -- otherwise to the controlling terminal.
+              if vim.env.TMUX then
+                local out = vim.fn.system { "tmux", "list-clients", "-F", "#{client_tty}" }
+                for tty in out:gmatch "[^\n]+" do
+                  if tty ~= "" then write_tty(tty, osc) end
+                end
+              else
+                write_tty("/dev/tty", osc)
+              end
+              -- Local X/Wayland clipboard as redundant channel: fills in for
+              -- terminals that don't honor OSC 52 (e.g. Konsole with the
+              -- toggle off). Harmless when irrelevant.
+              if vim.env.WAYLAND_DISPLAY ~= "" and vim.fn.executable "wl-copy" == 1 then
+                vim.fn.system({ "wl-copy" }, data)
+              elseif vim.env.DISPLAY ~= "" and vim.fn.executable "xclip" == 1 then
+                vim.fn.system({ "xclip", "-selection", "clipboard" }, data)
+              end
+            end
+          end
+          local function paste(_)
+            return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" }
+          end
+          return {
+            name = "tty-osc52",
+            copy = { ["+"] = copy "+", ["*"] = copy "*" },
+            paste = { ["+"] = paste, ["*"] = paste },
+          }
+        end)(),
       },
     },
     commands = {
@@ -117,6 +199,18 @@ return {
       n = {
         -- second key is the lefthand side of the map
 
+        -- copy file path / name (overrides snacks "Find projects" on <Leader>fp)
+        ["<Leader>fp"] = { "<Cmd>CopyRelativeFilePath<CR>", desc = "Copy relative file path" },
+        ["<Leader>fP"] = { "<Cmd>CopyAbsoluteFilePath<CR>", desc = "Copy absolute file path" },
+        ["<Leader>fn"] = { "<Cmd>CopyFileName<CR>", desc = "Copy file name" },
+        ["<Leader>fh"] = { "<Cmd>CopyRelativeFilePathFromHome<CR>", desc = "Copy file path from home" },
+
+        -- diffview against PR base (see :DiffViewPR / :DiffMergeBase user commands below)
+        ["<Leader>gd"] = { "<Cmd>DiffViewPR<CR>", desc = "Diff full PR vs base" },
+        ["<Leader>gD"] = { "<Cmd>DiffViewPR %<CR>", desc = "Diff current file vs PR base" },
+        ["<Leader>gv"] = { "<Cmd>DiffMergeBase<CR>", desc = "Vsplit current file at PR base (gitsigns)" },
+        ["<Leader>gx"] = { "<Cmd>DiffviewClose<CR>", desc = "Close diffview" },
+
         -- peek fold content in scrollable floating window
         ["zp"] = {
           function()
@@ -167,6 +261,7 @@ return {
           desc = "Close buffer from tabline",
         },
         ["<Leader>vb"] = { "<C-v>", desc = "Visual block mode" },
+        ["<C-v>"] = { '"+p', desc = "Paste from system clipboard" },
         ["<Leader>|"] = { "<cmd>vsplit #<CR>", desc = "Vsplit with previous buffer" },
 
         -- tables with just a `desc` key will be registered with which-key if it's installed
@@ -224,37 +319,24 @@ return {
         --   end,
         --   desc = "Search classes (workspace)",
         -- },
-        vim.api.nvim_create_user_command("DiffViewPR", function()
-          -- Get the base branch from GitHub PR
-          local base_branch = vim.fn.system("gh pr view --json baseRefName -q .baseRefName 2>/dev/null"):gsub("\n", "")
-
-          if vim.v.shell_error ~= 0 or base_branch == "" then
-            -- Fallback: try upstream/main, then origin/main, then main
-            local base = vim.fn.system("git rev-parse --verify upstream/main 2>/dev/null"):gsub("\n", "")
-            if vim.v.shell_error ~= 0 then
-              base = vim.fn.system("git rev-parse --verify origin/main 2>/dev/null"):gsub("\n", "")
-              if vim.v.shell_error ~= 0 then
-                base = "main"
-              else
-                base = "origin/main"
-              end
-            else
-              base = "upstream/main"
-            end
-            base_branch = base
-          else
-            -- Prepend upstream/ or origin/ if needed
-            local remote_base =
-              vim.fn.system("git rev-parse --verify upstream/" .. base_branch .. " 2>/dev/null"):gsub("\n", "")
-            if vim.v.shell_error ~= 0 then
-              base_branch = "origin/" .. base_branch
-            else
-              base_branch = "upstream/" .. base_branch
-            end
+        -- Open the full PR (or one file of it) in a Diffview tab.
+        --   :DiffViewPR              → all files
+        --   :DiffViewPR <path>       → just that file
+        --   :DiffViewPR %            → just the current buffer
+        vim.api.nvim_create_user_command("DiffViewPR", function(opts)
+          local merge_base = resolve_pr_merge_base()
+          local path_arg = opts.args ~= "" and (" -- " .. opts.args) or ""
+          vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD" .. path_arg)
+        end, { nargs = "?", complete = "file" }),
+        -- Open the current buffer's file at the PR merge-base in a vsplit alongside
+        -- the working copy, with diff highlights. Run again to toggle closed.
+        vim.api.nvim_create_user_command("DiffMergeBase", function()
+          local merge_base = resolve_pr_merge_base()
+          if merge_base == "" then
+            vim.notify("DiffMergeBase: could not resolve PR base branch", vim.log.levels.ERROR)
+            return
           end
-
-          local merge_base = vim.fn.system("git merge-base HEAD " .. base_branch):gsub("\n", "")
-          vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD")
+          require("gitsigns").diffthis(merge_base)
         end, {}),
       },
       v = {
@@ -268,6 +350,15 @@ return {
           end,
           desc = "Search selected text",
         },
+        -- Replace selection with system clipboard contents; send the
+        -- replaced text to the black hole so it doesn't clobber "+.
+        ["<C-v>"] = { '"_d"+P', desc = "Paste from system clipboard" },
+      },
+      i = {
+        ["<C-v>"] = { "<C-r><C-o>+", desc = "Paste from system clipboard" },
+      },
+      c = {
+        ["<C-v>"] = { "<C-r>+", desc = "Paste from system clipboard" },
       },
     },
   },
