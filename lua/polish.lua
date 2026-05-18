@@ -403,3 +403,51 @@ vim.keymap.set("n", "<leader>zz", "zMzv", { desc = "Fold all but cursor's path (
 vim.keymap.set("n", "<leader>zK", unfold_above_cursor, { desc = "Unfold all above cursor" })
 vim.keymap.set("n", "<leader>zJ", unfold_below_cursor, { desc = "Unfold all below cursor" })
 vim.keymap.set("n", "<leader>zZ", "zR", { desc = "Unfold everything (zR)" })
+
+-- :DiffOrig -- side-by-side diff of the current buffer against the version
+-- saved on disk, i.e. exactly your *unsaved* changes (unlike gitsigns, which
+-- diffs against git). Opens the on-disk content in a scratch vertical split.
+-- Close that split (`:q`) to end; or run :DiffOff to clear the diff state.
+vim.api.nvim_create_user_command("DiffOrig", function()
+  local original = vim.api.nvim_get_current_buf()
+  if vim.api.nvim_buf_get_name(original) == "" then
+    vim.notify("DiffOrig: buffer is not backed by a file", vim.log.levels.WARN)
+    return
+  end
+  local ft = vim.bo[original].filetype
+  vim.cmd "vertical new"
+  vim.bo.buftype = "nofile"
+  vim.bo.bufhidden = "wipe"
+  vim.bo.swapfile = false
+  -- `#` is the alternate buffer (the original file) in this fresh window;
+  -- `++edit` applies the file's own options while reading it from disk.
+  vim.cmd "read ++edit #"
+  vim.cmd "0d_" -- drop the empty first line `:read` leaves behind
+  vim.bo.filetype = ft
+  vim.cmd "diffthis"
+  vim.cmd "wincmd p"
+  vim.cmd "diffthis"
+end, { desc = "Diff buffer against the saved file on disk (unsaved changes)" })
+
+vim.api.nvim_create_user_command(
+  "DiffOff",
+  function() vim.cmd "diffoff!" end,
+  { desc = "Turn off diff mode in all windows of the current tab" }
+)
+
+-- markdown-preview.nvim browser opener.
+--
+-- mkdp's bundled opener.js detects WSL and shells out to `cmd.exe /c start`;
+-- with Windows interop disabled in this WSL that fails with
+-- "Can not open browser by using cmd.exe command". mkdp's server.js calls
+-- `g:mkdp_browserfunc` (if set) *instead of* opener.js, so we route the
+-- preview URL through the existing `~/.local/bin/browser-detached`, which
+-- already launches the Windows qutebrowser correctly. `detach` so the
+-- browser outlives nvim. Defined as a Vim function because mkdp invokes it
+-- by name over RPC (nvim_call_function).
+vim.cmd [[
+  function! MkdpBrowserOpen(url) abort
+    call jobstart([expand('~/.local/bin/browser-detached'), a:url], {'detach': v:true})
+  endfunction
+]]
+vim.g.mkdp_browserfunc = "MkdpBrowserOpen"

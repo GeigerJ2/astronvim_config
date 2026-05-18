@@ -80,6 +80,7 @@ return {
         showbreak = "↪ ", -- Show indicator for wrapped lines
         breakindent = true, -- Preserve indentation for wrapped
         clipboard = "unnamedplus", -- yank goes to system clipboard automatically
+        scrolloff = 5, -- keep 5 lines above/below cursor (zt/zb stop 5 lines short of the edge)
       },
       g = { -- vim.g.<key>
         -- configure global vim variables (vim.g)

@@ -1,7 +1,6 @@
 ---@type LazySpec
 return {
-  dir = "/home/geiger_j/dev/lua/octo.nvim.worktrees/fix-escape-graphql-block-string",
-  name = "octo.nvim",
+  "pwntester/octo.nvim",
   cmd = "Octo",
   opts = {
     use_local_fs = true, -- Use local files on right side of reviews

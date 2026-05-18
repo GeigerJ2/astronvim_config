@@ -1,7 +1,6 @@
 ---@type LazySpec
 return {
   "AbysmalBiscuit/insert-inlay-hints.nvim",
-  dir = "/home/geiger_j/dev/lua/insert-inlay-hints.nvim",
   lazy = true,
   cmd = {
     "InsertHints",
