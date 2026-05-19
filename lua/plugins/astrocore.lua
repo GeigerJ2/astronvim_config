@@ -113,6 +113,13 @@ return {
               fd:close()
             end
           end
+          -- Treat both unset (nil) and empty string as "not set". vim.env.<X>
+          -- returns nil for missing vars; comparing nil to "" with ~= yields
+          -- true, which incorrectly suggests the var is populated.
+          local function has_env(name)
+            local v = vim.env[name]
+            return v ~= nil and v ~= ""
+          end
           local function copy(_)
             return function(lines, _)
               local data = table.concat(lines, "\n")
@@ -130,14 +137,25 @@ return {
               -- Local X/Wayland clipboard as redundant channel: fills in for
               -- terminals that don't honor OSC 52 (e.g. Konsole with the
               -- toggle off). Harmless when irrelevant.
-              if vim.env.WAYLAND_DISPLAY ~= "" and vim.fn.executable "wl-copy" == 1 then
+              if has_env "WAYLAND_DISPLAY" and vim.fn.executable "wl-copy" == 1 then
                 vim.fn.system({ "wl-copy" }, data)
-              elseif vim.env.DISPLAY ~= "" and vim.fn.executable "xclip" == 1 then
+              elseif has_env "DISPLAY" and vim.fn.executable "xclip" == 1 then
                 vim.fn.system({ "xclip", "-selection", "clipboard" }, data)
               end
             end
           end
           local function paste(_)
+            -- Prefer the live system clipboard so that <C-r>+ / "+p reflect
+            -- whatever any other app (or CopyQ) put there, not just vim's
+            -- own last yank. Falls back to the unnamed register only if no
+            -- clipboard tool is available (true SSH-no-X case).
+            if has_env "WAYLAND_DISPLAY" and vim.fn.executable "wl-paste" == 1 then
+              local out = vim.fn.system { "wl-paste", "--no-newline" }
+              if vim.v.shell_error == 0 then return { vim.fn.split(out, "\n", true), "v" } end
+            elseif has_env "DISPLAY" and vim.fn.executable "xclip" == 1 then
+              local out = vim.fn.system { "xclip", "-selection", "clipboard", "-o" }
+              if vim.v.shell_error == 0 then return { vim.fn.split(out, "\n", true), "v" } end
+            end
             return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" }
           end
           return {
