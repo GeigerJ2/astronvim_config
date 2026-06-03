@@ -224,6 +224,20 @@ return {
         ["<Leader>fn"] = { "<Cmd>CopyFileName<CR>", desc = "Copy file name" },
         ["<Leader>fh"] = { "<Cmd>CopyRelativeFilePathFromHome<CR>", desc = "Copy file path from home" },
 
+        -- add a directory as a new tab rooted there, so a saved session can span
+        -- multiple project roots (see :SessionAddDir in polish.lua)
+        ["<Leader>Sa"] = {
+          function()
+            vim.ui.input(
+              { prompt = "Add dir to session: ", default = vim.fn.getcwd() .. "/", completion = "dir" },
+              function(dir)
+                if dir and dir ~= "" then vim.cmd("SessionAddDir " .. vim.fn.fnameescape(dir)) end
+              end
+            )
+          end,
+          desc = "Add directory as new tab (session root)",
+        },
+
         -- diffview against PR base (see :DiffViewPR / :DiffMergeBase user commands below)
         ["<Leader>gd"] = { "<Cmd>DiffViewPR<CR>", desc = "Diff full PR vs base" },
         ["<Leader>gD"] = { "<Cmd>DiffViewPR %<CR>", desc = "Diff current file vs PR base" },
@@ -299,7 +313,6 @@ return {
           end,
           desc = "Edit commit message (scratch)",
         },
-        ["<leader>fp"] = false, -- free <leader>fp for copy-file-path plugin
         ["<leader>fj"] = { function() require("telescope").extensions.projects.projects {} end, desc = "Find projects" },
         ["<leader>f<CR>"] = { "<cmd>Telescope resume<cr>", desc = "Resume previous search" },
         -- Filtered document-symbol pickers. Capitalized to avoid shadowing

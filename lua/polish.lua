@@ -451,3 +451,88 @@ vim.cmd [[
   endfunction
 ]]
 vim.g.mkdp_browserfunc = "MkdpBrowserOpen"
+
+-- Search selected text (or the word under the cursor) on the web.
+--
+-- Reuses the same `~/.local/bin/browser-detached` launcher as the markdown
+-- preview above, so it opens the Windows qutebrowser under WSL (and a native
+-- qutebrowser elsewhere) without relying on cmd.exe interop. `detach` so the
+-- browser outlives nvim.
+local browser_detached = vim.fn.expand "~/.local/bin/browser-detached"
+-- `%s` is replaced with the percent-encoded query. Kagi by default (no
+-- captcha walls, and we're authenticated there in qutebrowser). Swap for e.g.
+-- "https://duckduckgo.com/?q=%s" or "https://www.google.com/search?q=%s".
+local search_url = "https://kagi.com/search?q=%s"
+
+local function open_url(url) vim.fn.jobstart({ browser_detached, url }, { detach = true }) end
+
+-- Percent-encode everything outside the RFC 3986 unreserved set.
+local function urlencode(str)
+  return (str:gsub("[^%w%-_%.~]", function(c) return string.format("%%%02X", string.byte(c)) end))
+end
+
+-- If the text already looks like a URL, open it directly; otherwise search.
+local function open_or_search(text)
+  text = vim.trim((text or ""):gsub("%s+", " "))
+  if text == "" then
+    vim.notify("Nothing to search", vim.log.levels.WARN)
+    return
+  end
+  if text:match "^%a[%w+.-]*://" then
+    open_url(text)
+  elseif text:match "^www%." then
+    open_url("https://" .. text)
+  else
+    open_url(search_url:format(urlencode(text)))
+  end
+end
+
+-- Grab the current visual selection without clobbering the unnamed register.
+local function visual_selection()
+  local saved = vim.fn.getreg '"'
+  vim.cmd 'noau normal! "vy'
+  local selected = vim.fn.getreg "v"
+  vim.fn.setreg('"', saved)
+  return selected
+end
+
+vim.keymap.set(
+  "n",
+  "<Leader>fb",
+  function() open_or_search(vim.fn.expand "<cword>") end,
+  { desc = "Search word under cursor in browser" }
+)
+vim.keymap.set(
+  { "v", "x" },
+  "<Leader>fb",
+  function() open_or_search(visual_selection()) end,
+  { desc = "Search selection in browser" }
+)
+
+vim.api.nvim_create_user_command(
+  "SearchWeb",
+  function(opts) open_or_search(opts.args ~= "" and opts.args or vim.fn.expand "<cword>") end,
+  { nargs = "*", desc = "Search the web (args, or word under cursor) in the browser" }
+)
+
+-- Open an additional directory as a new tab rooted there: the tab gets its own
+-- cwd (via :tcd), so its file tree, Telescope, and live-grep all scope to that
+-- directory. resession saves each tab's cwd, so a saved session can span
+-- multiple project roots. Add dirs, then <Leader>Ss to save / <Leader>Sf to
+-- restore. Mapped to <Leader>Sa (prompts for the path) in astrocore.lua.
+local function session_add_dir(dir)
+  local path = vim.fn.fnamemodify(vim.fn.expand(dir), ":p")
+  if vim.fn.isdirectory(path) == 0 then
+    vim.notify("SessionAddDir: not a directory: " .. path, vim.log.levels.ERROR)
+    return
+  end
+  vim.cmd.tabnew()
+  vim.cmd.tcd(path)
+  vim.cmd.Neotree "show" -- file tree rooted at the new tab's cwd
+end
+
+vim.api.nvim_create_user_command(
+  "SessionAddDir",
+  function(opts) session_add_dir(opts.args) end,
+  { nargs = 1, complete = "dir", desc = "Open a directory as a new tab (adds a root to the session)" }
+)
