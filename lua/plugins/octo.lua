@@ -114,6 +114,33 @@ return {
     end
   end,
   keys = {
+    -- gX: open the PR/issue under the cursor in octo, inside nvim (mirrors the
+    -- built-in gx → open-in-browser). Handles a full GitHub URL (any repo),
+    -- owner/repo#N, #N, or a bare number (current repo); octo's :Octo parses
+    -- each form. Lazy-loads octo on first press.
+    {
+      "gX",
+      function()
+        local word = vim.fn.expand "<cWORD>"
+        local url = word:match "%((https?://[^)%s]+)" or word:match "(https?://[^%s)]+)"
+        if url then
+          vim.cmd { cmd = "Octo", args = { (url:gsub("[%.,;:%)]+$", "")) } }
+          return
+        end
+        local owner_repo, num = word:match "([%w%._%-]+/[%w%._%-]+)#(%d+)"
+        if owner_repo then
+          vim.cmd { cmd = "Octo", args = { num, owner_repo } }
+          return
+        end
+        num = word:match "#(%d+)" or word:match "^(%d+)$"
+        if num then
+          vim.cmd { cmd = "Octo", args = { num } }
+          return
+        end
+        vim.notify("gX: no PR/issue URL or #ref under the cursor", vim.log.levels.WARN)
+      end,
+      desc = "Octo: open PR/issue under cursor",
+    },
     {
       "<localleader>oi",
       "<CMD>Octo issue list<CR>",
