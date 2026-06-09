@@ -8,9 +8,10 @@ return {
       char = "│",
     },
     scope = {
-      enabled = true,
-      show_start = true,
-      show_end = true,
+      -- Scope markers (the `▎` char + start/end underlines) add a lot of
+      -- visual noise on deeply-nested files like Sirocco YAML configs.
+      -- Keep plain indent guides, drop the scope decoration.
+      enabled = false,
     }
   },
 }
