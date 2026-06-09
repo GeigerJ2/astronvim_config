@@ -63,6 +63,12 @@ return {
       },
       filename = {
         [".foorc"] = "fooscript",
+        -- Squash-merge message drafts (SQUASH_EDITMSG, written by the agent)
+        -- and git's own merge --squash file (SQUASH_MSG): treat like a commit
+        -- message so they get the gitcommit 50/72 colorcolumn, line-aware
+        -- textwidth (gq), etc.
+        ["SQUASH_EDITMSG"] = "gitcommit",
+        ["SQUASH_MSG"] = "gitcommit",
       },
       pattern = {
         [".*/etc/foo/.*"] = "fooscript",

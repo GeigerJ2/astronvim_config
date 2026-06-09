@@ -12,6 +12,12 @@ return {
             callback = function()
               vim.opt_local.colorcolumn = "50,72"
 
+              -- 4-space indentation
+              vim.opt_local.tabstop = 4
+              vim.opt_local.shiftwidth = 4
+              vim.opt_local.softtabstop = 4
+              vim.opt_local.expandtab = true
+
               -- Dynamic textwidth: 50 for subject line, 72 for body
               vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
                 buffer = 0,
@@ -58,6 +64,30 @@ return {
 
                 vim.api.nvim_buf_set_lines(0, 0, -1, false, formatted)
               end, { buffer = true, desc = "Format commit message" })
+            end,
+          },
+        },
+        -- Squash-merge drafts (SQUASH_EDITMSG): append the PR number to the
+        -- subject line, mirroring what the GitHub squash UI does (`... (#123)`),
+        -- so the file can be copy-pasted verbatim. Filename-scoped so it never
+        -- touches a real COMMIT_EDITMSG.
+        squash_pr_number = {
+          {
+            event = { "BufReadPost", "BufWritePre" },
+            pattern = "*SQUASH_EDITMSG",
+            callback = function(args)
+              if vim.fn.executable "gh" == 0 then return end
+              local subject = vim.api.nvim_buf_get_lines(args.buf, 0, 1, false)[1]
+              -- Skip if empty or the subject already ends with `(#<num>)`.
+              if not subject or subject == "" or subject:match "%(#%d+%)%s*$" then return end
+              local dir = vim.fn.fnamemodify(args.file, ":p:h")
+              local res = vim
+                .system({ "gh", "pr", "view", "--json", "number", "--jq", ".number" }, { cwd = dir, text = true })
+                :wait()
+              if res.code ~= 0 then return end
+              local num = vim.trim(res.stdout or "")
+              if not num:match "^%d+$" then return end
+              vim.api.nvim_buf_set_lines(args.buf, 0, 1, false, { subject .. " (#" .. num .. ")" })
             end,
           },
         },
