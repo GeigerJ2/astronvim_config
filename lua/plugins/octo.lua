@@ -89,9 +89,13 @@ return {
           if vim.api.nvim_win_is_valid(winid) and vim.api.nvim_win_get_buf(winid) == bufid then
             vim.api.nvim_win_call(winid, function()
               if vim.fn.bufname(bufid):match "octo://" then
-                pcall(vim.cmd.filetype, [[detect]])
+                -- `silent!`: filetype detect runs `doautocmd filetypedetect BufRead`,
+                -- which matches nothing on octo's synthetic buffers and otherwise
+                -- prints "No matching autocommands" (a message pcall can't swallow),
+                -- forcing a hit-enter prompt per file.
+                pcall(vim.cmd, "silent! filetype detect")
               end
-              pcall(vim.cmd.doau, [[BufEnter]])
+              pcall(vim.cmd, "silent! doautocmd BufEnter")
               pcall(vim.cmd.diffthis)
               pcall(vim.cmd.exec, [["normal! \<c-y>"]])
               -- Wrap long lines with smooth scrolling so both diff
