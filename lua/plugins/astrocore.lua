@@ -249,6 +249,9 @@ return {
         ["<Leader>gD"] = { "<Cmd>DiffViewPR %<CR>", desc = "Diff current file vs PR base" },
         ["<Leader>gv"] = { "<Cmd>DiffMergeBase<CR>", desc = "Vsplit current file at PR base (gitsigns)" },
         ["<Leader>gx"] = { "<Cmd>DiffviewClose<CR>", desc = "Close diffview" },
+        -- PR-changed files as a tree (single on-disk view); overrides the
+        -- default snacks git-status picker on this key.
+        ["<Leader>gt"] = { "<Cmd>PRTree<CR>", desc = "PR-changed files as a tree (on disk)" },
 
         -- peek fold content in scrollable floating window
         ["zp"] = {
@@ -375,6 +378,18 @@ return {
             return
           end
           require("gitsigns").diffthis(merge_base)
+        end, {}),
+        -- PR-changed files as a left tree (like Diffview's panel) but opening
+        -- each file on disk in a single window, not a side-by-side diff. gitsigns
+        -- (auto-based to the merge-base on attach) shows the changes inline.
+        -- Good for a first read-through of everything a PR touches.
+        vim.api.nvim_create_user_command("PRTree", function()
+          local merge_base = resolve_pr_merge_base()
+          if merge_base == "" then
+            vim.notify("PRTree: could not resolve the PR base branch", vim.log.levels.ERROR)
+            return
+          end
+          vim.cmd("Neotree git_status git_base=" .. merge_base .. " position=left reveal")
         end, {}),
       },
       v = {
