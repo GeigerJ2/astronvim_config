@@ -383,11 +383,25 @@ return {
         -- each file on disk in a single window, not a side-by-side diff. gitsigns
         -- (auto-based to the merge-base on attach) shows the changes inline.
         -- Good for a first read-through of everything a PR touches.
+        -- Closes any pre-existing neo-tree (e.g. the filesystem tree shown when
+        -- nvim is opened on a directory) and opens the first changed file in the
+        -- main window, so the end state is just: PR tree (left) + file contents.
         vim.api.nvim_create_user_command("PRTree", function()
           local merge_base = resolve_pr_merge_base()
           if merge_base == "" then
             vim.notify("PRTree: could not resolve the PR base branch", vim.log.levels.ERROR)
             return
+          end
+          -- First file the PR touches (vs the merge-base), excluding deletions so
+          -- the target still exists on disk. Paths are repo-root relative.
+          local toplevel = vim.fn.system("git rev-parse --show-toplevel"):gsub("\n", "")
+          local changed = vim.fn.systemlist("git diff --name-only --diff-filter=ACMRT " .. merge_base)
+          local git_ok = vim.v.shell_error == 0
+          -- Drop the regular filesystem neo-tree so we don't end up with two
+          -- trees or a stray vsplit when a file opens.
+          pcall(vim.cmd, "Neotree close")
+          if git_ok and #changed > 0 then
+            vim.cmd("edit " .. vim.fn.fnameescape(toplevel .. "/" .. changed[1]))
           end
           vim.cmd("Neotree git_status git_base=" .. merge_base .. " position=left reveal")
         end, {}),
