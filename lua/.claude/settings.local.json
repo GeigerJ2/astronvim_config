@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(git restore:*)",
+      "Bash(ruff check:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git:*)",
+      "Bash(~/.local/share/nvim/mason/packages/python-lsp-server/venv/bin/pip install:*)",
+      "Bash(gh extension:*)"
+    ]
+  }
+}

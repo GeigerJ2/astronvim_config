@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(git:*)",
+      "Bash(stylua:*)",
+      "Bash(npm exec -- stylua --version)",
+      "Bash(cargo install --list)"
+    ]
+  }
+}
