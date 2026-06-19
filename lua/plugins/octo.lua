@@ -104,6 +104,9 @@ return {
               vim.wo[winid].linebreak = true
               vim.wo[winid].smoothscroll = true
               vim.wo[winid].breakindent = true
+              -- Diff mode folds unchanged regions by default; show the whole
+              -- file unfolded during review (every line visible).
+              vim.wo[winid].foldenable = false
             end)
             break
           end
