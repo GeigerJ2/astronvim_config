@@ -1,3 +1,87 @@
+-- Jump to the next/prev review thread across ALL files in the active review.
+-- octo's built-in ]t/[t (next_thread) only walk threads within the current
+-- file's diff, so they no-op on a file that has none. dir = 1 forward, -1 back;
+-- wraps around. Lands the cursor on the thread's line in the right (local-file)
+-- diff window, switching files first when the next thread is in another file.
+local function octo_goto_thread(dir)
+  local ok, reviews = pcall(require, "octo.reviews")
+  if not ok then return end
+  local review = reviews.get_current_review()
+  if review == nil or review.layout == nil then
+    vim.notify("octo: no active review", vim.log.levels.WARN)
+    return
+  end
+  local fp = require "octo.reviews.file-panel"
+  local utils = require "octo.utils"
+  local layout = review.layout
+  local files = layout.files or {}
+
+  -- Ordered (file-index, line) stops for every thread that still has comments.
+  local stops = {}
+  for fi, f in ipairs(files) do
+    local lines = {}
+    for _, t in ipairs(fp.threads_for_path(f.path)) do
+      if t.comments ~= nil and #t.comments.nodes > 0 then table.insert(lines, t.startLine) end
+    end
+    table.sort(lines)
+    for _, l in ipairs(lines) do
+      table.insert(stops, { fi = fi, line = l, file = f })
+    end
+  end
+  if #stops == 0 then
+    vim.notify("octo: no review threads in this PR", vim.log.levels.INFO)
+    return
+  end
+
+  -- Current position (file index + line); defaults put us before the first stop.
+  local _, cur_path = utils.get_split_and_path(vim.api.nvim_get_current_buf())
+  local cur_fi, cur_line = 0, 0
+  if cur_path ~= nil then
+    for fi, f in ipairs(files) do
+      if f.path == cur_path then
+        cur_fi = fi
+        break
+      end
+    end
+    cur_line = vim.fn.line "."
+  end
+
+  local target
+  if dir >= 0 then
+    for _, s in ipairs(stops) do
+      if s.fi > cur_fi or (s.fi == cur_fi and s.line > cur_line) then
+        target = s
+        break
+      end
+    end
+    target = target or stops[1] -- wrap to first
+  else
+    for i = #stops, 1, -1 do
+      local s = stops[i]
+      if s.fi < cur_fi or (s.fi == cur_fi and s.line < cur_line) then
+        target = s
+        break
+      end
+    end
+    target = target or stops[#stops] -- wrap to last
+  end
+
+  local function place()
+    local win = layout.right_winid
+    if win ~= nil and vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_set_current_win(win)
+      pcall(vim.api.nvim_win_set_cursor, win, { target.line, 0 })
+      vim.cmd "normal! zz"
+    end
+  end
+  if target.fi ~= cur_fi then
+    layout:set_current_file(target.file)
+    vim.schedule(place) -- let the file switch settle before moving the cursor
+  else
+    place()
+  end
+end
+
 ---@type LazySpec
 return {
   "pwntester/octo.nvim",
@@ -182,6 +266,17 @@ return {
       "<localleader>os",
       function() require("octo.utils").create_base_search_command { include_current_repo = true } end,
       desc = "Search GitHub",
+    },
+    -- Cross-file thread navigation (octo's ]t/[t only move within one file).
+    {
+      "<localleader>ot",
+      function() octo_goto_thread(1) end,
+      desc = "Octo: next review thread (any file)",
+    },
+    {
+      "<localleader>oT",
+      function() octo_goto_thread(-1) end,
+      desc = "Octo: prev review thread (any file)",
     },
     -- Jump to local file at current line in a new tab
     {
