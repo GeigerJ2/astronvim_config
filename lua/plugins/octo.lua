@@ -121,6 +121,26 @@ return {
   config = function(_, opts)
     require("octo").setup(opts)
 
+    -- Keep :Octo review readable. octo mirrors GitHub with green/red diff
+    -- backgrounds of its own: changed *text* via OctoReviewDiffAdd/DeleteText
+    -- (white on dark green/red), and changed *lines* link DiffChange ->
+    -- DiffAdd/DiffDelete per review window. That wash hides syntax highlighting,
+    -- so blank the backgrounds (mark changed text with an underline instead).
+    -- octo re-applies its colors on every colorscheme, so this autocmd is
+    -- registered AFTER octo's own setup and thus runs last / wins.
+    local octo_const = require "octo.constants"
+    local function octo_plain_diff()
+      vim.api.nvim_set_hl(0, "OctoReviewDiffAddText", { underline = true })
+      vim.api.nvim_set_hl(0, "OctoReviewDiffDeleteText", { underline = true })
+      for _, ns in ipairs { 0, octo_const.OCTO_REVIEW_LEFT_HIGHLIGHT_NS, octo_const.OCTO_REVIEW_RIGHT_HIGHLIGHT_NS } do
+        for _, g in ipairs { "DiffAdd", "DiffDelete", "DiffChange" } do
+          vim.api.nvim_set_hl(ns, g, { bg = "NONE" })
+        end
+      end
+    end
+    octo_plain_diff()
+    vim.api.nvim_create_autocmd("ColorScheme", { callback = octo_plain_diff })
+
     -- :OctoPrEditCurrent — edit the PR for the current branch (no number needed)
     vim.api.nvim_create_user_command('OctoPrEditCurrent', function()
       local result = vim.fn.system('gh pr view --json number -q .number')
