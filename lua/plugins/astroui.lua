@@ -22,32 +22,20 @@ return {
       methods = { "lsp", "treesitter", "indent" },
     },
     highlights = {
-      init = { -- this table overrides highlights in all themes
-        -- GitHub-style diff colors for diffview
-        DiffAdd = { bg = "#0d2818" },
-        DiffDelete = { bg = "#3d0f0f" },
-        DiffChange = { bg = "#1a3a4d" },
-        DiffText = { bg = "#1a4a1a", bold = true },
-        -- Diffview-specific highlights
+      -- Single source of truth for diff-related highlight overrides (applies to
+      -- all themes). DiffAdd/DiffDelete/DiffChange/DiffText are deliberately NOT
+      -- overridden: those are the groups :Octo review's diff mode uses, and a
+      -- solid background there hid the syntax highlighting — left at the
+      -- colorscheme default so syntax shows through. The GitHub-style red/green
+      -- backgrounds are scoped to diffview via its own DiffviewDiff* groups.
+      init = {
         DiffviewDiffAdd = { bg = "#0d2818" },
         DiffviewDiffDelete = { bg = "#3d0f0f", fg = "#6e3535" },
         DiffviewDiffChange = { bg = "#1a3a4d" },
         DiffviewDiffText = { bg = "#1a4a1a" },
-        -- Folded/context lines (collapsed hunk separators)
+        -- Folded / collapsed hunk-separator lines.
         Folded = { bg = "#1c1c1c", fg = "#555555", italic = true },
         DiffviewFoldColumn = { bg = "#1c1c1c", fg = "#555555" },
-      },
-      astrodark = { -- a table of overrides/changes when applying the astrotheme theme
-        -- GitHub-style diff colors for diffview
-        DiffAdd = { bg = "#0d2818" },
-        DiffDelete = { bg = "#3d0f0f" },
-        DiffChange = { bg = "#1a3a4d" },
-        DiffText = { bg = "#1a4a1a", bold = true },
-        DiffviewDiffAdd = { bg = "#0d2818" },
-        DiffviewDiffDelete = { bg = "#3d0f0f", fg = "#6e3535" },
-        DiffviewDiffChange = { bg = "#1a3a4d" },
-        DiffviewDiffText = { bg = "#1a4a1a" },
-        Folded = { bg = "#1c1c1c", fg = "#555555", italic = true },
       },
     },
     -- Icons can be configured throughout the interface
