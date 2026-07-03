@@ -5,9 +5,9 @@
 -- fit in the normal config locations above can go here
 
 -- Diff / Diffview / Folded highlight overrides now live in ONE place:
--- lua/plugins/astroui.lua (highlights.init). The DiffAdd/DiffChange/DiffText/
--- DiffDelete overrides were dropped so :Octo review keeps the colorscheme's
--- syntax highlighting instead of a flat red/green background.
+-- lua/plugins/astroui.lua (highlights.init). There the DiffAdd/DiffChange/
+-- DiffText/DiffDelete backgrounds are cleared (bg=NONE) so :Octo review shows
+-- syntax highlighting instead of astrodark's green/red line backgrounds.
 
 -- NOTE: gitcommit buffer setup (50/72 colorcolumn, line-aware textwidth,
 -- <leader>lf formatter) lives in lua/plugins/committia.lua.

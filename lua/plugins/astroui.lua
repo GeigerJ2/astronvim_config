@@ -22,13 +22,19 @@ return {
       methods = { "lsp", "treesitter", "indent" },
     },
     highlights = {
-      -- Single source of truth for diff-related highlight overrides (applies to
-      -- all themes). DiffAdd/DiffDelete/DiffChange/DiffText are deliberately NOT
-      -- overridden: those are the groups :Octo review's diff mode uses, and a
-      -- solid background there hid the syntax highlighting — left at the
-      -- colorscheme default so syntax shows through. The GitHub-style red/green
-      -- backgrounds are scoped to diffview via its own DiffviewDiff* groups.
+      -- Single source of truth for diff-related highlight overrides (all themes).
       init = {
+        -- :Octo review + native vimdiff color changed lines via these groups
+        -- (octo also links DiffChange -> DiffAdd/DiffDelete per review window).
+        -- astrodark's defaults give them solid green/red backgrounds that wash
+        -- over the syntax highlighting, so clear the backgrounds: changes read
+        -- from the left/right panes + sign column instead. (The exact changed
+        -- *words* still get octo's own OctoReviewDiff*Text highlight.)
+        DiffAdd = { bg = "NONE" },
+        DiffDelete = { bg = "NONE" },
+        DiffChange = { bg = "NONE" },
+        DiffText = { bg = "NONE" },
+        -- GitHub-style red/green kept for diffview only, via its own groups.
         DiffviewDiffAdd = { bg = "#0d2818" },
         DiffviewDiffDelete = { bg = "#3d0f0f", fg = "#6e3535" },
         DiffviewDiffChange = { bg = "#1a3a4d" },
