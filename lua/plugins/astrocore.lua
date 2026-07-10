@@ -126,6 +126,25 @@ return {
             local v = vim.env[name]
             return v ~= nil and v ~= ""
           end
+          -- Resolve the live X/Wayland display. An nvim spawned inside an old
+          -- tmux pane often has NO DISPLAY in its own env (it predates the X
+          -- attach), which silently disables the xclip/wl-copy channel below and
+          -- breaks the handoff to CopyQ. tmux keeps the current display fresh via
+          -- update-environment, so recover it from there. Returns display,wayland
+          -- (nil when genuinely unavailable, i.e. real SSH-no-X).
+          local function resolve_display()
+            local display = has_env "DISPLAY" and vim.env.DISPLAY or nil
+            local wayland = has_env "WAYLAND_DISPLAY" and vim.env.WAYLAND_DISPLAY or nil
+            if display == nil and wayland == nil and vim.env.TMUX then
+              -- tmux prints `DISPLAY=:1` when set, `-DISPLAY` when unset; the
+              -- `^DISPLAY=(%S+)` capture yields nil in the unset case.
+              local d = vim.fn.system("tmux show-environment DISPLAY 2>/dev/null"):match "^DISPLAY=(%S+)"
+              local w = vim.fn.system("tmux show-environment WAYLAND_DISPLAY 2>/dev/null"):match "^WAYLAND_DISPLAY=(%S+)"
+              display = (d and d ~= "") and d or nil
+              wayland = (w and w ~= "") and w or nil
+            end
+            return display, wayland
+          end
           local function copy(_)
             return function(lines, _)
               local data = table.concat(lines, "\n")
@@ -141,12 +160,14 @@ return {
                 write_tty("/dev/tty", osc)
               end
               -- Local X/Wayland clipboard as redundant channel: fills in for
-              -- terminals that don't honor OSC 52 (e.g. Konsole with the
-              -- toggle off). Harmless when irrelevant.
-              if has_env "WAYLAND_DISPLAY" and vim.fn.executable "wl-copy" == 1 then
-                vim.fn.system({ "wl-copy" }, data)
-              elseif has_env "DISPLAY" and vim.fn.executable "xclip" == 1 then
-                vim.fn.system({ "xclip", "-selection", "clipboard" }, data)
+              -- terminals that don't honor OSC 52 (e.g. Konsole with the toggle
+              -- off) and is what CopyQ watches. `env DISPLAY=…` so it works even
+              -- when nvim's own env has no display (recovered from tmux above).
+              local display, wayland = resolve_display()
+              if wayland and vim.fn.executable "wl-copy" == 1 then
+                vim.fn.system({ "env", "WAYLAND_DISPLAY=" .. wayland, "wl-copy" }, data)
+              elseif display and vim.fn.executable "xclip" == 1 then
+                vim.fn.system({ "env", "DISPLAY=" .. display, "xclip", "-selection", "clipboard" }, data)
               end
             end
           end
@@ -155,11 +176,12 @@ return {
             -- whatever any other app (or CopyQ) put there, not just vim's
             -- own last yank. Falls back to the unnamed register only if no
             -- clipboard tool is available (true SSH-no-X case).
-            if has_env "WAYLAND_DISPLAY" and vim.fn.executable "wl-paste" == 1 then
-              local out = vim.fn.system { "wl-paste", "--no-newline" }
+            local display, wayland = resolve_display()
+            if wayland and vim.fn.executable "wl-paste" == 1 then
+              local out = vim.fn.system { "env", "WAYLAND_DISPLAY=" .. wayland, "wl-paste", "--no-newline" }
               if vim.v.shell_error == 0 then return { vim.fn.split(out, "\n", true), "v" } end
-            elseif has_env "DISPLAY" and vim.fn.executable "xclip" == 1 then
-              local out = vim.fn.system { "xclip", "-selection", "clipboard", "-o" }
+            elseif display and vim.fn.executable "xclip" == 1 then
+              local out = vim.fn.system { "env", "DISPLAY=" .. display, "xclip", "-selection", "clipboard", "-o" }
               if vim.v.shell_error == 0 then return { vim.fn.split(out, "\n", true), "v" } end
             end
             return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" }
