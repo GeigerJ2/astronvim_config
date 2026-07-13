@@ -442,3 +442,30 @@ vim.api.nvim_create_user_command(
   function(opts) session_add_dir(opts.args) end,
   { nargs = 1, complete = "dir", desc = "Open a directory as a new tab (adds a root to the session)" }
 )
+
+-- ]] / [[ / ][ / [] jump to the next/prev FUNCTION or CLASS, treesitter-based so
+-- they work at any indentation (methods!) and in every language with a parser --
+-- unlike Vim's built-in per-filetype motions (python's match only column 0).
+-- Set buffer-local on FileType, `vim.schedule`d so they land AFTER any ftplugin's
+-- own ]] mapping and thus win (same reason AstroNvim's ]f/]k win). Skips buffers
+-- with no treesitter parser so ]] keeps its default there. The list query means
+-- "next function OR class", whichever comes first.
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("ts_section_motions", { clear = true }),
+  callback = function(ev)
+    if not pcall(vim.treesitter.get_parser, ev.buf) then return end
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+      local ok, move = pcall(require, "nvim-treesitter-textobjects.move")
+      if not ok then return end
+      local q = { "@function.outer", "@class.outer" }
+      local function map(lhs, fn, desc)
+        vim.keymap.set({ "n", "x", "o" }, lhs, fn, { buffer = ev.buf, silent = true, desc = desc })
+      end
+      map("]]", function() move.goto_next_start(q, "textobjects") end, "Next function/class")
+      map("[[", function() move.goto_previous_start(q, "textobjects") end, "Prev function/class")
+      map("][", function() move.goto_next_end(q, "textobjects") end, "Next function/class end")
+      map("[]", function() move.goto_previous_end(q, "textobjects") end, "Prev function/class end")
+    end)
+  end,
+})
