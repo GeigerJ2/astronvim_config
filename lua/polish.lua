@@ -29,6 +29,11 @@ local fold_persistence = vim.api.nvim_create_augroup("persistent_folds", { clear
 local function should_persist(bufnr)
   if bufnr == nil or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
   if not vim.api.nvim_buf_is_valid(bufnr) then return false end
+  -- Skip diff-mode buffers (Octo review, diffview, vimdiff): they fold via
+  -- foldmethod=diff, so hijacking them to manual folds would break the diff
+  -- folding and zM/zR there.
+  local w = vim.fn.bufwinid(bufnr)
+  if w ~= -1 and vim.wo[w].diff then return false end
   local name = vim.api.nvim_buf_get_name(bufnr)
   return vim.bo[bufnr].buftype == ""
     and vim.bo[bufnr].modifiable
@@ -98,6 +103,10 @@ local function apply_fold_state(target_buf, state)
   if not vim.api.nvim_buf_is_valid(target_buf) then return end
   local winid = vim.fn.bufwinid(target_buf)
   if winid == -1 then return end
+  -- We're scheduled, so the buffer may have entered diff mode since
+  -- load_fold_state ran (Octo review runs diffthis after BufReadPost). Bail:
+  -- switching it to manual folds would clobber diff folding and break zM.
+  if vim.wo[winid].diff then return end
 
   -- Switch foldmethod=manual and lower foldlevel for the window.
   -- AstroNvim sets foldlevel=99 globally, which auto-opens any fold at
