@@ -154,6 +154,13 @@ return {
     end
 
     opts.filesystem = opts.filesystem or {}
+    -- Open `nvim <dir>` (what `rev` runs) as a left SIDEBAR + an empty main
+    -- window, instead of replacing the current window (AstroNvim's default is
+    -- "open_current"). With open_current the tree lives in the main window, so a
+    -- later neo-tree focus/reveal -- e.g. ]g's navigate_pr, or opening a file --
+    -- spawns a SECOND neo-tree in the sidebar position, duplicating the tree.
+    -- Starting as a sidebar keeps a single tree; files open in the main window.
+    opts.filesystem.hijack_netrw_behavior = "open_default"
     opts.filesystem.window = opts.filesystem.window or {}
     opts.filesystem.window.mappings = vim.tbl_deep_extend(
       "force",
