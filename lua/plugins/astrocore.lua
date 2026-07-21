@@ -252,6 +252,43 @@ return {
         ["<Leader>fn"] = { "<Cmd>CopyFileName<CR>", desc = "Copy file name" },
         ["<Leader>fh"] = { "<Cmd>CopyRelativeFilePathFromHome<CR>", desc = "Copy file path from home" },
 
+        -- delete the current file from disk and wipe its buffer, landing on the
+        -- alternate buffer (or a fresh empty one) rather than [No Name].
+        ["<Leader>fD"] = {
+          function()
+            local bufnr = vim.api.nvim_get_current_buf()
+            local file = vim.api.nvim_buf_get_name(bufnr)
+            if file == "" or vim.bo[bufnr].buftype ~= "" then
+              vim.notify("Delete file: no real file in the current buffer", vim.log.levels.WARN)
+              return
+            end
+            local shown = vim.fn.fnamemodify(file, ":~:.")
+            if vim.fn.confirm("Delete " .. shown .. " from disk?", "&Yes\n&No", 2) ~= 1 then return end
+            if vim.fn.delete(file) ~= 0 then
+              vim.notify("Delete file: failed to remove " .. shown, vim.log.levels.ERROR)
+              return
+            end
+            -- Repoint any window on this buffer before wiping, so we don't close
+            -- windows or get dumped on [No Name].
+            local alt = vim.fn.bufnr "#"
+            local repl = (alt ~= -1 and alt ~= bufnr and vim.api.nvim_buf_is_valid(alt) and vim.bo[alt].buflisted)
+              and alt
+              or nil
+            for _, win in ipairs(vim.api.nvim_list_wins()) do
+              if vim.api.nvim_win_get_buf(win) == bufnr then
+                if repl then
+                  vim.api.nvim_win_set_buf(win, repl)
+                else
+                  vim.api.nvim_win_call(win, function() vim.cmd "enew" end)
+                end
+              end
+            end
+            vim.api.nvim_buf_delete(bufnr, { force = true })
+            vim.notify("Deleted " .. shown)
+          end,
+          desc = "Delete file (from disk)",
+        },
+
         -- add a directory as a new tab rooted there, so a saved session can span
         -- multiple project roots (see :SessionAddDir in polish.lua)
         ["<Leader>Sa"] = {
