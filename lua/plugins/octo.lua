@@ -90,6 +90,7 @@ return {
     use_local_fs = true, -- Use local files on right side of reviews
     enable_builtin = true,
     picker = "telescope",
+    default_to_projects_v2 = true, -- show Projects V2 timeline events (we track releases on project boards)
     -- Explicit mappings to ensure they work
     mappings = {
       pull_request = {
