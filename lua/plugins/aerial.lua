@@ -5,7 +5,14 @@
 return {
   "stevearc/aerial.nvim",
   opts = function(_, opts)
+    -- Skip the auto-open outline when viewing over SSH (typically the laptop into
+    -- a workstation, where the screen is small and the sidebar just crowds it).
+    -- SSH_CONNECTION is the signal; inside the persistent tmux server it only
+    -- reaches nvim because tmux.conf lists it in `update-environment` (so nvim
+    -- must be launched after attaching over SSH). Still toggle with <leader>lS.
+    local is_remote = vim.env.SSH_CONNECTION ~= nil or vim.env.SSH_TTY ~= nil
     opts.open_automatic = function(bufnr)
+      if is_remote then return false end
       -- Octo review diff buffers (both octo:// virtual buffers and use-local real
       -- files) carry the octo_diff_props buffer var, set at buffer creation. Octo
       -- fires BufEnter -- which triggers aerial's auto-open -- BEFORE it runs

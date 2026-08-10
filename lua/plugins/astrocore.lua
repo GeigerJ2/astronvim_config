@@ -55,6 +55,18 @@ return {
       virtual_text = true,
       underline = true,
     },
+    -- Start with diagnostics off (basedpyright/ruff are noisy in these codebases).
+    -- <Leader>ud toggles vim.diagnostic.enable() back on; the display config above
+    -- (virtual_text/underline) applies whenever they're re-enabled.
+    autocmds = {
+      diagnostics_off_at_startup = {
+        {
+          event = "VimEnter",
+          desc = "Disable diagnostics by default",
+          callback = function() vim.diagnostic.enable(false) end,
+        },
+      },
+    },
     -- passed to `vim.filetype.add`
     filetypes = {
       -- see `:h vim.filetype.add` for usage
