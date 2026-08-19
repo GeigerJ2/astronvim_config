@@ -323,6 +323,7 @@ return {
         -- PR-changed files as a tree (single on-disk view); overrides the
         -- default snacks git-status picker on this key.
         ["<Leader>gt"] = { "<Cmd>PRTree<CR>", desc = "PR-changed files as a tree (on disk)" },
+        ["<Leader>gc"] = { "<Cmd>PRCommits<CR>", desc = "Review PR commit-by-commit" },
 
         -- peek fold content in scrollable floating window
         ["zp"] = {
@@ -440,6 +441,19 @@ return {
           local path_arg = opts.args ~= "" and (" -- " .. opts.args) or ""
           vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD" .. path_arg)
         end, { nargs = "?", complete = "file" }),
+        -- :PRCommits — GitHub-style commit-by-commit review of the PR. Opens a
+        -- Diffview file-history panel of just this branch's commits (vs the PR
+        -- merge-base); select each to see its own diff (commit vs its parent),
+        -- ]q/[q cycle files within a commit, g? shows the keymap. --reverse lists
+        -- oldest-first so you review the branch in the order it was built.
+        vim.api.nvim_create_user_command("PRCommits", function()
+          local merge_base = resolve_pr_merge_base()
+          if merge_base == "" then
+            vim.notify("PRCommits: could not resolve the PR base branch", vim.log.levels.ERROR)
+            return
+          end
+          vim.cmd("DiffviewFileHistory --range=" .. merge_base .. "..HEAD --no-merges --reverse")
+        end, {}),
         -- Open the current buffer's file at the PR merge-base in a vsplit alongside
         -- the working copy, with diff highlights. Run again to toggle closed.
         vim.api.nvim_create_user_command("DiffMergeBase", function()

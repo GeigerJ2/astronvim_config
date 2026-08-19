@@ -31,8 +31,27 @@ return {
       -- ]q/[q: cycle files across the whole diff, like octo review.
       { "n", "]q", actions.select_next_entry, { desc = "Next file" } },
       { "n", "[q", actions.select_prev_entry, { desc = "Prev file" } },
+      -- ]C/[C: next/prev commit in a file-history / :PRCommits review.
+      { "n", "]C", actions.select_next_commit, { desc = "Next commit" } },
+      { "n", "[C", actions.select_prev_commit, { desc = "Prev commit" } },
     })
     opts.keymaps.view = view
+
+    -- Selecting an entry in either panel should drop the cursor into the diff so
+    -- ]g works immediately, instead of leaving the cursor on the file/commit
+    -- list. focus_entry is select_entry's focus-the-diff twin: view:set_file(_,
+    -- true) vs false. It still toggles folds on folder/commit headers, so it's
+    -- safe to bind on the same keys. Also expose ]C/[C there.
+    for _, panel in ipairs { "file_panel", "file_history_panel" } do
+      local maps = opts.keymaps[panel] or {}
+      vim.list_extend(maps, {
+        { "n", "<cr>", actions.focus_entry, { desc = "Open diff and focus it" } },
+        { "n", "o", actions.focus_entry, { desc = "Open diff and focus it" } },
+        { "n", "]C", actions.select_next_commit, { desc = "Next commit" } },
+        { "n", "[C", actions.select_prev_commit, { desc = "Prev commit" } },
+      })
+      opts.keymaps[panel] = maps
+    end
 
     return opts
   end,
