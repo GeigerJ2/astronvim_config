@@ -284,6 +284,11 @@ return {
       desc = "Octo: PR checks for current branch",
     },
     {
+      "<localleader>or",
+      "<CMD>Octo review<CR>",
+      desc = "Octo: Start review of current branch PR",
+    },
+    {
       "<localleader>os",
       function() require("octo.utils").create_base_search_command { include_current_repo = true } end,
       desc = "Search GitHub",
