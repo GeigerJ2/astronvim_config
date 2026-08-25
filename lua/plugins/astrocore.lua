@@ -324,6 +324,7 @@ return {
         -- default snacks git-status picker on this key.
         ["<Leader>gt"] = { "<Cmd>PRTree<CR>", desc = "PR-changed files as a tree (on disk)" },
         ["<Leader>gc"] = { "<Cmd>PRCommits<CR>", desc = "Review PR commit-by-commit" },
+        ["<Leader>gi"] = { "<Cmd>PrInfo<CR>", desc = "PR title + body (popup)" },
 
         -- peek fold content in scrollable floating window
         ["zp"] = {
@@ -453,6 +454,75 @@ return {
             return
           end
           vim.cmd("DiffviewFileHistory --range=" .. merge_base .. "..HEAD --no-merges --reverse")
+        end, {}),
+        -- :PrInfo — the current branch's PR title + body in a floating popup, a
+        -- quick reference during review. Works from octo or diffview alike since
+        -- it just queries the current branch's PR via gh. q / <Esc> closes it.
+        vim.api.nvim_create_user_command("PrInfo", function()
+          local out = vim.fn.system(
+            "gh pr view --json number,title,body,url,state,isDraft,author,headRefName,baseRefName 2>/dev/null"
+          )
+          if vim.v.shell_error ~= 0 then
+            vim.notify("PrInfo: no PR found for the current branch", vim.log.levels.WARN)
+            return
+          end
+          local ok, pr = pcall(vim.json.decode, out)
+          if not ok or type(pr) ~= "table" then
+            vim.notify("PrInfo: could not parse gh output", vim.log.levels.ERROR)
+            return
+          end
+
+          local state = pr.isDraft and "DRAFT" or pr.state
+          local lines = {
+            ("# #%d  %s"):format(pr.number, pr.title),
+            "",
+            ("`%s` → `%s`  ·  %s  ·  @%s"):format(
+              pr.headRefName,
+              pr.baseRefName,
+              state,
+              pr.author and pr.author.login or "?"
+            ),
+            pr.url,
+            "",
+            "---",
+            "",
+          }
+          if vim.trim(pr.body or "") == "" then
+            table.insert(lines, "_(no description)_")
+          else
+            for _, l in ipairs(vim.split(pr.body, "\n", { plain = true })) do
+              table.insert(lines, (l:gsub("\r$", "")))
+            end
+          end
+
+          local buf = vim.api.nvim_create_buf(false, true)
+          vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+          vim.bo[buf].filetype = "markdown" -- lets render-markdown.nvim prettify it
+          vim.bo[buf].modifiable = false
+
+          -- Full-screen: subtract the border's 2 cols/rows and the command line
+          -- so the rounded border and title stay on-screen (a literal full width
+          -- would push the border off the edge and nvim errors).
+          local win = vim.api.nvim_open_win(buf, true, {
+            relative = "editor",
+            width = vim.o.columns - 2,
+            height = vim.o.lines - vim.o.cmdheight - 2,
+            row = 0,
+            col = 0,
+            style = "minimal",
+            border = "rounded",
+            title = (" PR #%d "):format(pr.number),
+            title_pos = "center",
+          })
+          vim.wo[win].wrap = true
+          vim.wo[win].linebreak = true
+          vim.wo[win].conceallevel = 2
+
+          for _, key in ipairs { "q", "<Esc>" } do
+            vim.keymap.set("n", key, function()
+              if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
+            end, { buffer = buf, nowait = true, silent = true, desc = "Close PR info" })
+          end
         end, {}),
         -- Open the current buffer's file at the PR merge-base in a vsplit alongside
         -- the working copy, with diff highlights. Run again to toggle closed.
