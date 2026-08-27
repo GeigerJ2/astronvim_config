@@ -66,6 +66,34 @@ return {
           callback = function() vim.diagnostic.enable(false) end,
         },
       },
+      -- Keep the two side-by-side diff panes of a review tab at 50/50. octo
+      -- review and diffview both build their layout async and, when the terminal
+      -- reports its size late (SSH / a tiling WM / tmux), settle off-center;
+      -- nvim's own resize handling scales proportionally, so a bad ratio sticks.
+      -- This runs `<C-w>=` (the panel is winfixwidth, so only the diff panes
+      -- move) on the events that follow that settle. WinResized fires as the
+      -- async layout sizes the panes; VimResized on the terminal settle; WinEnter
+      -- when you focus a review tab that was built in the background (the `rev`
+      -- :PRCommits tab). The tolerance guard skips balanced panes, so it neither
+      -- churns nor recurses through the resize it triggers.
+      equalize_diff_panes = {
+        {
+          event = { "WinResized", "VimResized", "WinEnter" },
+          desc = "Snap review diff panes back to 50/50",
+          callback = function()
+            local diffs, has_panel = {}, false
+            for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+              if vim.wo[w].diff then diffs[#diffs + 1] = w end
+              if vim.wo[w].winfixwidth then has_panel = true end
+            end
+            if not has_panel or #diffs < 2 then return end
+            local a = vim.api.nvim_win_get_width(diffs[1])
+            local b = vim.api.nvim_win_get_width(diffs[2])
+            if math.abs(a - b) <= 2 then return end
+            vim.cmd "wincmd ="
+          end,
+        },
+      },
     },
     -- passed to `vim.filetype.add`
     filetypes = {
