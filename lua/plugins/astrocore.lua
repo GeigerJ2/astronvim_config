@@ -552,6 +552,33 @@ return {
             end, { buffer = buf, nowait = true, silent = true, desc = "Close PR info" })
           end
         end, {}),
+        -- :CommitDiffSplit — used by the `gcwd` fish function via GIT_EDITOR. When
+        -- editing COMMIT_EDITMSG, open the staged diff (git diff --cached, piped
+        -- through delta for side-by-side colour) in a terminal split below, and
+        -- keep focus on the message window on top. ZZ (or :q of the message
+        -- window) writes the message and tears the whole editor down so git can
+        -- proceed; the diff terminal would otherwise keep nvim alive.
+        vim.api.nvim_create_user_command("CommitDiffSplit", function()
+          local msg_win = vim.api.nvim_get_current_win()
+          local msg_buf = vim.api.nvim_get_current_buf()
+          vim.cmd "botright new"
+          vim.cmd("resize " .. math.floor(vim.o.lines * 0.6))
+          vim.fn.termopen { "sh", "-c", "git diff --cached | delta --paging=never" }
+          vim.bo.buflisted = false
+          vim.cmd "stopinsert"
+          vim.api.nvim_set_current_win(msg_win)
+          vim.keymap.set(
+            "n",
+            "ZZ",
+            "<Cmd>write<CR><Cmd>qa!<CR>",
+            { buffer = msg_buf, silent = true, desc = "Finish commit" }
+          )
+          vim.api.nvim_create_autocmd("QuitPre", {
+            buffer = msg_buf,
+            once = true,
+            callback = function() vim.cmd "silent! qa!" end,
+          })
+        end, {}),
         -- Open the current buffer's file at the PR merge-base in a vsplit alongside
         -- the working copy, with diff highlights. Run again to toggle closed.
         vim.api.nvim_create_user_command("DiffMergeBase", function()
