@@ -25,12 +25,57 @@ return {
       end,
     })
 
+    -- `L` (open_commit_log) pops the commit message in a centred float. Diffview's own default
+    -- caps it at `math.min(100, columns)` x `math.min(24, lines)` (see
+    -- ui/panels/commit_log_panel.lua `default_config_float`), and 24 rows is the pinch: commit
+    -- bodies wrap at 72 columns, so width is rarely the constraint, but a long body scrolls out of
+    -- a 24-row box. Grow it, mostly vertically, and keep it centred so it stays where the eye is.
+    --
+    -- A function, not a table: `Panel:get_config()` calls `win_config` when it's callable, so this
+    -- is recomputed on every open and follows terminal resizes.
+    opts.commit_log_panel = opts.commit_log_panel or {}
+    opts.commit_log_panel.win_config = function()
+      local usable_height = vim.o.lines - vim.o.cmdheight
+      -- 72-col bodies plus `git log`'s 4-space indent and a little slack; no point going wider.
+      local width = math.min(120, math.floor(vim.o.columns * 0.9))
+      local height = math.floor(usable_height * 0.8)
+      return {
+        type = "float",
+        relative = "editor",
+        width = width,
+        height = height,
+        col = math.floor((vim.o.columns - width) / 2),
+        row = math.floor((usable_height - height) / 2),
+      }
+    end
+
+    -- ]g / [g: next/prev change, cascading past the ends of a file.
+    --
+    -- gitsigns' hunk keys don't fire in diffview (it doesn't attach to diffview's blob buffers),
+    -- so these drive Vim's native diff-change motion instead. Plain ]c stops dead at the last
+    -- change in a file, which mid-review means reaching for ]q on every file boundary. When the
+    -- cursor doesn't move, fall through to the next entry -- exactly what ]q does.
+    --
+    -- In a file-history view (`:PRCommits`) that fall-through crosses commits for free: the panel
+    -- walks files by offset (`set_file_by_offset` -> `_get_entry_by_file_offset`), so running off
+    -- the end of one commit's files lands on the next commit's first file.
+    local function change_or_entry(motion, select_entry)
+      return function()
+        local before = vim.api.nvim_win_get_cursor(0)
+        pcall(vim.cmd, "normal! " .. motion)
+        if vim.api.nvim_win_get_cursor(0)[1] ~= before[1] then
+          vim.cmd "normal! zz"
+        else
+          select_entry()
+        end
+      end
+    end
+
     opts.keymaps = opts.keymaps or {}
     local view = opts.keymaps.view or {}
     vim.list_extend(view, {
-      -- ]g/[g: next/prev change (gitsigns' hunk keys don't fire in diffview).
-      { "n", "]g", function() vim.cmd "normal! ]czz" end, { desc = "Next change" } },
-      { "n", "[g", function() vim.cmd "normal! [czz" end, { desc = "Prev change" } },
+      { "n", "]g", change_or_entry("]c", actions.select_next_entry), { desc = "Next change (or file)" } },
+      { "n", "[g", change_or_entry("[c", actions.select_prev_entry), { desc = "Prev change (or file)" } },
       -- ]q/[q: cycle files across the whole diff, like octo review.
       { "n", "]q", actions.select_next_entry, { desc = "Next file" } },
       { "n", "[q", actions.select_prev_entry, { desc = "Prev file" } },

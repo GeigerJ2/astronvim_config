@@ -223,6 +223,25 @@ return {
     end
 
     opts.filesystem = opts.filesystem or {}
+
+    -- Show the contents of `github/` even though it's git-excluded.
+    --
+    -- `github/` (no dot) is untracked scratch space holding GitHub-bound drafts: PR bodies,
+    -- issue drafts, review replies. It lives in the main worktree and is symlinked into every
+    -- linked worktree, and it's excluded via `/github` in the repo's `info/exclude` so a stray
+    -- `git add -A` can't sweep a draft into a commit. That exclude is exactly why AstroNvim's
+    -- `hide_gitignored = true` collapsed it to "(N hidden items)".
+    --
+    -- `always_show_by_pattern` wins over the gitignore filter (renderer.lua checks
+    -- `fby.always_show` before `hide_gitignored`). A pattern containing a separator is matched
+    -- against the full path rather than the basename, via `string.find` -- so this is a plain
+    -- substring test. The leading slash keeps it from also matching `.github/`, which would
+    -- otherwise contain the substring `github/`.
+    opts.filesystem.filtered_items = opts.filesystem.filtered_items or {}
+    local always_show_by_pattern = opts.filesystem.filtered_items.always_show_by_pattern or {}
+    table.insert(always_show_by_pattern, "/github/")
+    opts.filesystem.filtered_items.always_show_by_pattern = always_show_by_pattern
+
     -- Open `nvim <dir>` (what `rev` runs) as a left SIDEBAR + an empty main
     -- window, instead of replacing the current window (AstroNvim's default is
     -- "open_current"). With open_current the tree lives in the main window, so a
