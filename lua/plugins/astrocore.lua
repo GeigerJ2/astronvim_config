@@ -3,37 +3,74 @@
 -- NOTE: We highly recommend setting up the Lua Language Server (`:LspInstall lua_ls`)
 --       as this provides autocomplete and documentation while editing
 
--- Resolve the merge-base of HEAD against the PR's base branch.
--- Tries `gh pr view` first, then falls back to upstream/main → origin/main → main.
--- Returns the merge-base SHA as a trimmed string (or "" if everything fails).
-local function resolve_pr_merge_base()
-  local base_branch = vim.fn.system("gh pr view --json baseRefName -q .baseRefName 2>/dev/null"):gsub("\n", "")
+-- Resolve the base to review the current branch against, as a merge-base SHA:
+-- the point where this branch diverged from its base. Shared by :ReviewCommits,
+-- :DiffViewPR, :DiffMergeBase and :PRTree so they all agree on "the base",
+-- whether the branch has a PR or is just a local branch off main.
+--
+-- Base ref, first that resolves wins:
+--   1. an explicit override (a branch / SHA passed to the command),
+--   2. the PR's base branch (`gh pr view`), when the branch has a PR,
+--   3. the remote's default branch (origin/HEAD, e.g. origin/main|master),
+--   4. main / master / develop, as a last resort.
+-- Remote-tracking spellings (upstream/ then origin/) are preferred for a base
+-- branch so it means the integration branch, not a stale local copy of it.
+local function verify_ref(ref)
+  vim.fn.system("git rev-parse --verify --quiet " .. vim.fn.shellescape(ref) .. "^{commit}")
+  return vim.v.shell_error == 0
+end
 
-  if vim.v.shell_error ~= 0 or base_branch == "" then
-    -- Fallback: try upstream/main, then origin/main, then main
-    local base = vim.fn.system("git rev-parse --verify upstream/main 2>/dev/null"):gsub("\n", "")
-    if vim.v.shell_error ~= 0 then
-      base = vim.fn.system("git rev-parse --verify origin/main 2>/dev/null"):gsub("\n", "")
-      if vim.v.shell_error ~= 0 then
-        base = "main"
-      else
-        base = "origin/main"
-      end
-    else
-      base = "upstream/main"
+-- First spelling of `name` that resolves to a commit, or nil. `prefer_remote`
+-- puts upstream/ and origin/ ahead of the bare name (for a base branch);
+-- otherwise the name is honored as typed first (an explicit override, which
+-- may be a local branch or a raw SHA).
+local function resolve_ref(name, prefer_remote)
+  local order = prefer_remote and { "upstream/" .. name, "origin/" .. name, name }
+    or { name, "upstream/" .. name, "origin/" .. name }
+  for _, candidate in ipairs(order) do
+    if verify_ref(candidate) then
+      return candidate
     end
-    base_branch = base
-  else
-    -- Prepend upstream/ or origin/ if needed
-    local _ = vim.fn.system("git rev-parse --verify upstream/" .. base_branch .. " 2>/dev/null"):gsub("\n", "")
-    if vim.v.shell_error ~= 0 then
-      base_branch = "origin/" .. base_branch
-    else
-      base_branch = "upstream/" .. base_branch
+  end
+  return nil
+end
+
+local function resolve_base_ref(override)
+  if override ~= nil and override ~= "" then
+    return resolve_ref(override, false)
+  end
+
+  local pr_base = vim.fn.system("gh pr view --json baseRefName -q .baseRefName 2>/dev/null"):gsub("%s+$", "")
+  if vim.v.shell_error == 0 and pr_base ~= "" then
+    return resolve_ref(pr_base, true)
+  end
+
+  for _, remote in ipairs { "upstream", "origin" } do
+    local head = vim
+      .fn
+      .system("git symbolic-ref --quiet --short refs/remotes/" .. remote .. "/HEAD 2>/dev/null")
+      :gsub("%s+$", "")
+    if vim.v.shell_error == 0 and head ~= "" then
+      return head
     end
   end
 
-  return vim.fn.system("git merge-base HEAD " .. base_branch):gsub("\n", "")
+  for _, name in ipairs { "main", "master", "develop" } do
+    local ref = resolve_ref(name, true)
+    if ref ~= nil then
+      return ref
+    end
+  end
+  return nil
+end
+
+-- Merge-base SHA of HEAD and the resolved base ref, or "" when none resolves.
+local function resolve_review_base(override)
+  local base = resolve_base_ref(override)
+  if base == nil then
+    return ""
+  end
+  return vim.fn.system("git merge-base HEAD " .. vim.fn.shellescape(base)):gsub("%s+$", "")
 end
 
 ---@type LazySpec
@@ -74,7 +111,7 @@ return {
       -- move) on the events that follow that settle. WinResized fires as the
       -- async layout sizes the panes; VimResized on the terminal settle; WinEnter
       -- when you focus a review tab that was built in the background (the `rev`
-      -- :PRCommits tab). The tolerance guard skips balanced panes, so it neither
+      -- :ReviewCommits tab). The tolerance guard skips balanced panes, so it neither
       -- churns nor recurses through the resize it triggers.
       equalize_diff_panes = {
         {
@@ -351,7 +388,7 @@ return {
         -- PR-changed files as a tree (single on-disk view); overrides the
         -- default snacks git-status picker on this key.
         ["<Leader>gt"] = { "<Cmd>PRTree<CR>", desc = "PR-changed files as a tree (on disk)" },
-        ["<Leader>gc"] = { "<Cmd>PRCommits<CR>", desc = "Review PR commit-by-commit" },
+        ["<Leader>gc"] = { "<Cmd>ReviewCommits<CR>", desc = "Review commits one-by-one (PR or branch)" },
         ["<Leader>gi"] = { "<Cmd>PrInfo<CR>", desc = "PR title + body (popup)" },
 
         -- peek fold content in scrollable floating window
@@ -466,23 +503,40 @@ return {
         --   :DiffViewPR <path>       → just that file
         --   :DiffViewPR %            → just the current buffer
         vim.api.nvim_create_user_command("DiffViewPR", function(opts)
-          local merge_base = resolve_pr_merge_base()
+          local merge_base = resolve_review_base()
           local path_arg = opts.args ~= "" and (" -- " .. opts.args) or ""
           vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD" .. path_arg)
         end, { nargs = "?", complete = "file" }),
-        -- :PRCommits — GitHub-style commit-by-commit review of the PR. Opens a
-        -- Diffview file-history panel of just this branch's commits (vs the PR
-        -- merge-base); select each to see its own diff (commit vs its parent),
-        -- ]q/[q cycle files within a commit, g? shows the keymap. --reverse lists
-        -- oldest-first so you review the branch in the order it was built.
-        vim.api.nvim_create_user_command("PRCommits", function()
-          local merge_base = resolve_pr_merge_base()
+        -- :ReviewCommits — GitHub-style commit-by-commit review of the commits this
+        -- branch adds. Opens a Diffview file-history panel of just those commits
+        -- (from where the branch diverged from its base); select each to see its
+        -- own diff (commit vs its parent), ]q/[q cycle files within a commit, g?
+        -- shows the keymap. --reverse lists oldest-first so you review the branch
+        -- in the order it was built.
+        --
+        -- The base is the PR base when the branch has a PR, else the merge-base
+        -- with the default branch (see resolve_review_base), so this works on any
+        -- local branch, PR or not. Pass an explicit base to override it:
+        --   :ReviewCommits            → PR base, else default-branch fork point
+        --   :ReviewCommits develop    → commits since the fork from develop
+        --   :ReviewCommits feature-a  → commits since the fork from a stacked parent
+        vim.api.nvim_create_user_command("ReviewCommits", function(opts)
+          local merge_base = resolve_review_base(opts.args)
           if merge_base == "" then
-            vim.notify("PRCommits: could not resolve the PR base branch", vim.log.levels.ERROR)
+            local for_base = opts.args ~= "" and (" for base '" .. opts.args .. "'") or ""
+            vim.notify("ReviewCommits: could not resolve a base branch" .. for_base, vim.log.levels.ERROR)
             return
           end
           vim.cmd("DiffviewFileHistory --range=" .. merge_base .. "..HEAD --no-merges --reverse")
-        end, {}),
+        end, {
+          nargs = "?",
+          complete = function(arglead)
+            local branches = vim.fn.systemlist "git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2>/dev/null"
+            return vim.tbl_filter(function(b)
+              return b:find(arglead, 1, true) == 1
+            end, branches)
+          end,
+        }),
         -- :PrInfo — the current branch's PR title + body in a floating popup, a
         -- quick reference during review. Works from octo or diffview alike since
         -- it just queries the current branch's PR via gh. q / <Esc> closes it.
@@ -582,9 +636,9 @@ return {
         -- Open the current buffer's file at the PR merge-base in a vsplit alongside
         -- the working copy, with diff highlights. Run again to toggle closed.
         vim.api.nvim_create_user_command("DiffMergeBase", function()
-          local merge_base = resolve_pr_merge_base()
+          local merge_base = resolve_review_base()
           if merge_base == "" then
-            vim.notify("DiffMergeBase: could not resolve PR base branch", vim.log.levels.ERROR)
+            vim.notify("DiffMergeBase: could not resolve a base branch", vim.log.levels.ERROR)
             return
           end
           require("gitsigns").diffthis(merge_base)
@@ -597,9 +651,9 @@ return {
         -- nvim is opened on a directory) and opens the first changed file in the
         -- main window, so the end state is just: PR tree (left) + file contents.
         vim.api.nvim_create_user_command("PRTree", function()
-          local merge_base = resolve_pr_merge_base()
+          local merge_base = resolve_review_base()
           if merge_base == "" then
-            vim.notify("PRTree: could not resolve the PR base branch", vim.log.levels.ERROR)
+            vim.notify("PRTree: could not resolve a base branch", vim.log.levels.ERROR)
             return
           end
           -- First file the PR touches (vs the merge-base), excluding deletions so

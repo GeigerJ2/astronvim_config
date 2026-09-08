@@ -56,7 +56,7 @@ return {
     -- change in a file, which mid-review means reaching for ]q on every file boundary. When the
     -- cursor doesn't move, fall through to the next entry -- exactly what ]q does.
     --
-    -- In a file-history view (`:PRCommits`) that fall-through crosses commits for free: the panel
+    -- In a file-history view (`:ReviewCommits`) that fall-through crosses commits for free: the panel
     -- walks files by offset (`set_file_by_offset` -> `_get_entry_by_file_offset`), so running off
     -- the end of one commit's files lands on the next commit's first file.
     local function change_or_entry(motion, select_entry)
@@ -79,7 +79,7 @@ return {
       -- ]q/[q: cycle files across the whole diff, like octo review.
       { "n", "]q", actions.select_next_entry, { desc = "Next file" } },
       { "n", "[q", actions.select_prev_entry, { desc = "Prev file" } },
-      -- ]C/[C: next/prev commit in a file-history / :PRCommits review.
+      -- ]C/[C: next/prev commit in a file-history / :ReviewCommits review.
       { "n", "]C", actions.select_next_commit, { desc = "Next commit" } },
       { "n", "[C", actions.select_prev_commit, { desc = "Prev commit" } },
     })
