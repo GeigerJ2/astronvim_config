@@ -49,6 +49,13 @@ return {
       }
     end
 
+    -- The file-history panel (:ReviewCommits, <Leader>gc) is the commit list at the
+    -- bottom. Its diff windows are where the review happens, so halve the panel's
+    -- default 16-row height to give the diff more room; the list stays scrollable.
+    opts.file_history_panel = opts.file_history_panel or {}
+    opts.file_history_panel.win_config =
+      vim.tbl_extend("force", opts.file_history_panel.win_config or {}, { height = 8 })
+
     -- ]g / [g: next/prev change, cascading past the ends of a file.
     --
     -- gitsigns' hunk keys don't fire in diffview (it doesn't attach to diffview's blob buffers),
