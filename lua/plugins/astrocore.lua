@@ -103,6 +103,28 @@ return {
           callback = function() vim.diagnostic.enable(false) end,
         },
       },
+      -- K on a Python buffer: LSP hover, never the built-in pydoc keywordprg.
+      -- Neovim's python ftplugin points keywordprg at `python3 -m pydoc`, which
+      -- K uses whenever no hover-capable LSP client is attached: it opens a
+      -- terminal and, on an unqualified name (`Mapping`), fails outright. Mapping
+      -- K -> hover buffer-locally covers the pre-attach window too; once
+      -- basedpyright attaches it maps K to the same handler, so this only ever
+      -- adds the missing early/no-client case.
+      python_hover_over_pydoc = {
+        {
+          event = "FileType",
+          pattern = "python",
+          desc = "K uses LSP hover, not pydoc",
+          callback = function(args)
+            vim.keymap.set(
+              "n",
+              "K",
+              function() vim.lsp.buf.hover() end,
+              { buffer = args.buf, desc = "Hover (LSP)" }
+            )
+          end,
+        },
+      },
       -- Keep the two side-by-side diff panes of a review tab at 50/50. octo
       -- review and diffview both build their layout async and, when the terminal
       -- reports its size late (SSH / a tiling WM / tmux), settle off-center;
@@ -281,11 +303,14 @@ return {
           end
           vim.cmd "tabnew"
           vim.cmd("tcd " .. vim.fn.fnameescape(dir))
-          vim.cmd("edit " .. vim.fn.fnameescape(dir))
+          -- No `:edit <dir>`: neo-tree hijacks a directory buffer into a full tree
+          -- in the new tab that then has to be closed by hand. `tabnew` already
+          -- leaves a clean empty buffer, and the tab is rooted here via tcd, so
+          -- <Leader>e opens the tree on demand instead of forcing it.
         end,
         nargs = 1,
         complete = "dir",
-        desc = "Open directory in new tab with its own working directory",
+        desc = "Open directory in new tab with its own working directory (tcd)",
       },
       CommitMsg = {
         function(opts)

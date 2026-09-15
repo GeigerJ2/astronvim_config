@@ -5,9 +5,14 @@
 
 -- Shared Python path detection (used by pyright and basedpyright)
 local function detect_python_path(root_dir)
-  -- 1. Check VIRTUAL_ENV environment variable (active venv)
+  -- 1. Check VIRTUAL_ENV environment variable (active venv). Only trust it if the
+  -- interpreter still exists: nvim often inherits a VIRTUAL_ENV from a sibling
+  -- worktree that has since been removed, and a dead path here would shadow the
+  -- valid local .venv below and leave the LSP with no usable interpreter.
   local venv = vim.env.VIRTUAL_ENV
-  if venv then return venv .. "/bin/python" end
+  if venv and vim.fn.executable(venv .. "/bin/python") == 1 then
+    return venv .. "/bin/python"
+  end
 
   local root = root_dir or vim.fn.getcwd()
 
