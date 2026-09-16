@@ -73,6 +73,51 @@ local function resolve_review_base(override)
   return vim.fn.system("git merge-base HEAD " .. vim.fn.shellescape(base)):gsub("%s+$", "")
 end
 
+-- <Leader>f{p,P,n,h} copy the current file's path. In a diffview buffer the name
+-- is a `diffview://…/.git/…/<oid>/<relpath>` URI, so copy-file-path.nvim would
+-- copy that instead of a real path. Resolve the actual working-tree file via
+-- diffview's own API there; ordinary buffers fall through to the plugin command.
+local function diffview_abs_path()
+  if not vim.startswith(vim.api.nvim_buf_get_name(0), "diffview://") then
+    return nil
+  end
+  local ok, lib = pcall(require, "diffview.lib")
+  if not ok then
+    return nil
+  end
+  local view = lib.get_current_view()
+  if view == nil or view.infer_cur_file == nil then
+    return nil
+  end
+  local got, file = pcall(function() return view:infer_cur_file() end)
+  if not got or file == nil or file.absolute_path == nil then
+    return nil
+  end
+  return file.absolute_path
+end
+
+local function copy_path(kind)
+  local abs = diffview_abs_path()
+  if abs == nil then
+    vim.cmd(({
+      relative = "CopyRelativeFilePath",
+      absolute = "CopyAbsoluteFilePath",
+      name = "CopyFileName",
+      home = "CopyRelativeFilePathFromHome",
+    })[kind])
+    return
+  end
+  local path = ({
+    relative = vim.fn.fnamemodify(abs, ":."),
+    absolute = abs,
+    name = vim.fn.fnamemodify(abs, ":t"),
+    home = vim.fn.fnamemodify(abs, ":~"),
+  })[kind]
+  vim.fn.setreg("+", path)
+  vim.fn.setreg('"', path)
+  vim.notify("Copied: " .. path)
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrocore",
@@ -349,10 +394,10 @@ return {
         -- second key is the lefthand side of the map
 
         -- copy file path / name (overrides snacks "Find projects" on <Leader>fp)
-        ["<Leader>fp"] = { "<Cmd>CopyRelativeFilePath<CR>", desc = "Copy relative file path" },
-        ["<Leader>fP"] = { "<Cmd>CopyAbsoluteFilePath<CR>", desc = "Copy absolute file path" },
-        ["<Leader>fn"] = { "<Cmd>CopyFileName<CR>", desc = "Copy file name" },
-        ["<Leader>fh"] = { "<Cmd>CopyRelativeFilePathFromHome<CR>", desc = "Copy file path from home" },
+        ["<Leader>fp"] = { function() copy_path "relative" end, desc = "Copy relative file path" },
+        ["<Leader>fP"] = { function() copy_path "absolute" end, desc = "Copy absolute file path" },
+        ["<Leader>fn"] = { function() copy_path "name" end, desc = "Copy file name" },
+        ["<Leader>fh"] = { function() copy_path "home" end, desc = "Copy file path from home" },
 
         -- delete the current file from disk and wipe its buffer, landing on the
         -- alternate buffer (or a fresh empty one) rather than [No Name].
