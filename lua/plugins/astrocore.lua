@@ -118,6 +118,50 @@ local function copy_path(kind)
   vim.notify("Copied: " .. path)
 end
 
+-- Open the `path` (with an optional `:line`) under the cursor in the main editor
+-- window. Bound to `gf` in the Claude terminal (see the claude_open_path autocmd)
+-- so a path in the chat jumps straight into the code: `<C-\><C-n>` to leave insert,
+-- cursor on the path, `gf`. Resolves relative paths against cwd; targets the first
+-- normal editor window (not this terminal, neo-tree, or aerial).
+local function open_path_in_editor()
+  local cfile = vim.fn.expand "<cfile>"
+  if cfile == "" then
+    return
+  end
+  local line = vim.fn.getline("."):match(vim.pesc(cfile) .. ":(%d+)")
+  local path = cfile
+  if vim.fn.filereadable(path) ~= 1 then
+    local alt = vim.fs.joinpath(vim.fn.getcwd(), cfile)
+    path = vim.fn.filereadable(alt) == 1 and alt or path
+  end
+  if vim.fn.filereadable(path) ~= 1 then
+    vim.notify("gf: not a readable path: " .. cfile, vim.log.levels.WARN)
+    return
+  end
+
+  local cur = vim.api.nvim_get_current_win()
+  local target
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if w ~= cur then
+      local b = vim.api.nvim_win_get_buf(w)
+      local ft = vim.bo[b].filetype
+      if vim.bo[b].buftype == "" and ft ~= "neo-tree" and ft ~= "aerial" then
+        target = w
+        break
+      end
+    end
+  end
+  if target ~= nil then
+    vim.api.nvim_set_current_win(target)
+  else
+    vim.cmd "wincmd k" -- claude is the bottom split; the editor is above
+  end
+  vim.cmd("edit " .. vim.fn.fnameescape(path))
+  if line ~= nil then
+    pcall(vim.api.nvim_win_set_cursor, 0, { tonumber(line), 0 })
+  end
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrocore",
@@ -146,6 +190,27 @@ return {
           event = "VimEnter",
           desc = "Disable diagnostics by default",
           callback = function() vim.diagnostic.enable(false) end,
+        },
+      },
+      -- In the Claude terminal (claudecode.nvim split), `gf` opens the path under
+      -- the cursor in the editor window (see open_path_in_editor). Enter terminal
+      -- normal mode first (<C-\><C-n>), put the cursor on a path/`path:line` in the
+      -- chat, then gf. Scoped to the claude terminal by its buffer name.
+      claude_open_path = {
+        {
+          event = "TermOpen",
+          desc = "gf opens chat paths in the editor (Claude terminal)",
+          callback = function(args)
+            if not vim.api.nvim_buf_get_name(args.buf):match "claude" then
+              return
+            end
+            vim.keymap.set(
+              "n",
+              "gf",
+              open_path_in_editor,
+              { buffer = args.buf, silent = true, desc = "Open path under cursor in editor" }
+            )
+          end,
         },
       },
       -- K on a Python buffer: LSP hover, never the built-in pydoc keywordprg.
@@ -392,6 +457,36 @@ return {
       -- first key is the mode
       n = {
         -- second key is the lefthand side of the map
+
+        -- which-key group label for the claudecode.nvim maps (defined in
+        -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
+        ["<Leader>a"] = { desc = "󰚩 AI/Claude Code" },
+
+        -- <Leader>W: overlay a big number on every split and jump to the one you
+        -- press. Uses nvim-window-picker (already a neo-tree dep). filter_func
+        -- includes ALL windows (neo-tree, aerial, terminals like the claude
+        -- split), which the default bo-exclude rules would skip; passed per-call
+        -- so neo-tree's own "open with picker" keeps its defaults.
+        ["<Leader>W"] = {
+          function()
+            local ok, wp = pcall(require, "window-picker")
+            if not ok then
+              return
+            end
+            local win = wp.pick_window {
+              hint = "floating-big-letter",
+              selection_chars = "123456789",
+              filter_func = function(windows)
+                local cur = vim.api.nvim_get_current_win()
+                return vim.tbl_filter(function(w) return w ~= cur end, windows)
+              end,
+            }
+            if win then
+              vim.api.nvim_set_current_win(win)
+            end
+          end,
+          desc = "Pick window (jump by number)",
+        },
 
         -- copy file path / name (overrides snacks "Find projects" on <Leader>fp)
         ["<Leader>fp"] = { function() copy_path "relative" end, desc = "Copy relative file path" },

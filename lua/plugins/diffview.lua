@@ -54,7 +54,7 @@ return {
     -- default 16-row height to give the diff more room; the list stays scrollable.
     opts.file_history_panel = opts.file_history_panel or {}
     opts.file_history_panel.win_config =
-      vim.tbl_extend("force", opts.file_history_panel.win_config or {}, { height = 8 })
+      vim.tbl_extend("force", opts.file_history_panel.win_config or {}, { height = 12 })
 
     -- ]g / [g: next/prev change, cascading past the ends of a file.
     --

@@ -475,6 +475,25 @@ vim.api.nvim_create_autocmd("FileType", {
       map("[[", function() move.goto_previous_start(q, "textobjects") end, "Prev function/class")
       map("][", function() move.goto_next_end(q, "textobjects") end, "Next function/class end")
       map("[]", function() move.goto_previous_end(q, "textobjects") end, "Prev function/class end")
+
+      -- Semantic selection (the new nvim-treesitter dropped the incremental_selection
+      -- module): vaf/vif select a function, vac/vic a class. daf/yaf etc. also work.
+      -- For arbitrary "grow to enclosing node", use flash's `S` (label-select any node).
+      local ok_sel, sel = pcall(require, "nvim-treesitter-textobjects.select")
+      if ok_sel then
+        local function smap(lhs, query, desc)
+          vim.keymap.set(
+            { "x", "o" },
+            lhs,
+            function() sel.select_textobject(query, "textobjects") end,
+            { buffer = ev.buf, silent = true, desc = desc }
+          )
+        end
+        smap("af", "@function.outer", "a function")
+        smap("if", "@function.inner", "inner function")
+        smap("ac", "@class.outer", "a class")
+        smap("ic", "@class.inner", "inner class")
+      end
     end)
   end,
 })
