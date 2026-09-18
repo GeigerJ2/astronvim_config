@@ -19,7 +19,15 @@ return {
       -- (the native fallback only does left/right); snacks_win_opts overrides the
       -- provider's default position/size.
       provider = "snacks",
-      snacks_win_opts = { position = "bottom", height = 0.33 },
+      -- position=bottom with relative="editor" makes snacks use `botright` (a
+      -- full-width bottom split, spanning under neo-tree) instead of the default
+      -- "win"/`belowright` (confined to the editor column). height ~45% since
+      -- Claude is used a lot.
+      snacks_win_opts = { position = "bottom", height = 0.45, relative = "editor" },
+      -- Land in terminal-normal mode, not insert, when the split is focused, so
+      -- nvim keymaps (<leader> etc.) take precedence there. Press i/a to type to
+      -- Claude, <C-\><C-n> to leave insert back to normal.
+      auto_insert = false,
     },
     -- diff_opts = { layout = "vertical" }, -- "vertical" | "horizontal" | "unified"
   },
