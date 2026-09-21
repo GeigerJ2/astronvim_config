@@ -48,6 +48,24 @@ end
 return {
   "nvim-neo-tree/neo-tree.nvim",
   opts = function(_, opts)
+    -- Hide completely untracked files in :PRTree. The git_status source hardcodes
+    -- `untracked_files = "all"`, which pollutes a merge-base view (:PRTree) with
+    -- scratch like COMMIT_MESSAGES.md. When a git_base is set (PRTree passes one;
+    -- the normal Git tab does not), force `untracked_files = "no"` so only the PR's
+    -- tracked changes show. Wrap once; the normal Git tab keeps its untracked.
+    local git = require "neo-tree.git"
+    if not git._prtree_no_untracked then
+      local orig_status = git.status
+      git.status = function(path, base_lookup, skip_bubbling, status_opts)
+        if base_lookup ~= nil and next(base_lookup) ~= nil then
+          status_opts = status_opts or {}
+          status_opts.untracked_files = "no"
+        end
+        return orig_status(path, base_lookup, skip_bubbling, status_opts)
+      end
+      git._prtree_no_untracked = true
+    end
+
     -- `Z`: recursive expand-all that survives buffer switches (see the
     -- expand_all_sticky comment above for the why). Top-level `commands`
     -- and `window.mappings` are merged into every source by neo-tree.

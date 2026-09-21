@@ -192,6 +192,21 @@ return {
           callback = function() vim.diagnostic.enable(false) end,
         },
       },
+      -- 50/72 commit-message guide columns in COMMIT_MESSAGES.md (the multi-commit
+      -- reslicing doc). It's markdown, so it misses gitcommit's textwidth/
+      -- colorcolumn: show markers just past col 50 (subject) and 72 (body), and
+      -- set textwidth=72 so gq/gw reflow body paragraphs (no auto-wrap on typing).
+      commit_messages_guides = {
+        {
+          event = { "BufWinEnter", "BufNewFile" },
+          pattern = { "COMMIT_MESSAGES.md", "*/COMMIT_MESSAGES.md" },
+          desc = "50/72 guides in COMMIT_MESSAGES.md",
+          callback = function()
+            vim.opt_local.colorcolumn = "51,73"
+            vim.opt_local.textwidth = 72
+          end,
+        },
+      },
       -- In the Claude terminal (claudecode.nvim split), `gf` opens the path under
       -- the cursor in the editor window (see open_path_in_editor). Enter terminal
       -- normal mode first (<C-\><C-n>), put the cursor on a path/`path:line` in the
