@@ -292,6 +292,13 @@ return {
       }
     )
 
+    -- ]q / [q in the PRTree (git_status source): cycle PR files and open each in
+    -- the editor, matching octo review and diffview / <Leader>gc muscle memory.
+    -- Reuses navigate_pr, so it walks the same PR-file set and keeps the tree
+    -- cursor synced. (git_status also keeps its default [g / ]g.)
+    opts.git_status.window.mappings["]q"] = { navigate_pr "next", desc = "Next PR file" }
+    opts.git_status.window.mappings["[q"] = { navigate_pr "prev", desc = "Prev PR file" }
+
     -- === Per-file PR diff stats in the tree: +added / -removed vs the base ===
     -- Cache abspath -> {added, removed}, refreshed before each render (git diff
     -- --numstat is cheap). numstat of <merge-base> vs the working tree is the
