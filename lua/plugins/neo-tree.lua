@@ -66,6 +66,15 @@ return {
       git._prtree_no_untracked = true
     end
 
+    -- The git_status source (PRTree + the Git tab) maps `gg` to
+    -- git_commit_and_push, which pops a "Commit message:" prompt instead of
+    -- jumping to the top. Restore `gg` = go-to-top there; commits go through
+    -- lazygit (<Leader>gg) / gcwd, never the tree. (gc/gp/ga/gu/gr stay.)
+    opts.git_status = opts.git_status or {}
+    opts.git_status.window = opts.git_status.window or {}
+    opts.git_status.window.mappings = opts.git_status.window.mappings or {}
+    opts.git_status.window.mappings["gg"] = function() vim.cmd "normal! gg" end
+
     -- `Z`: recursive expand-all that survives buffer switches (see the
     -- expand_all_sticky comment above for the why). Top-level `commands`
     -- and `window.mappings` are merged into every source by neo-tree.
