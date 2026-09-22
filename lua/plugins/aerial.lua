@@ -13,6 +13,9 @@ return {
     local is_remote = vim.env.SSH_CONNECTION ~= nil or vim.env.SSH_TTY ~= nil
     opts.open_automatic = function(bufnr)
       if is_remote then return false end
+      -- Set by the <Leader>lS toggle: once you close the outline, keep it closed
+      -- on buffer switches until you reopen it (which clears the flag).
+      if vim.g.aerial_suppress_autoopen then return false end
       -- Octo review diff buffers (both octo:// virtual buffers and use-local real
       -- files) carry the octo_diff_props buffer var, set at buffer creation. Octo
       -- fires BufEnter -- which triggers aerial's auto-open -- BEFORE it runs
@@ -30,4 +33,26 @@ return {
     end
     return opts
   end,
+  dependencies = {
+    {
+      "AstroNvim/astrocore",
+      opts = function(_, opts)
+        -- Override AstroNvim's <Leader>lS (a plain aerial.toggle) so closing the
+        -- outline also suppresses the auto-open, and reopening re-enables it.
+        opts.mappings.n["<Leader>lS"] = {
+          function()
+            local aerial = require "aerial"
+            if aerial.is_open() then
+              vim.g.aerial_suppress_autoopen = true
+              aerial.close()
+            else
+              vim.g.aerial_suppress_autoopen = false
+              aerial.open()
+            end
+          end,
+          desc = "Symbols outline (stays closed)",
+        }
+      end,
+    },
+  },
 }
