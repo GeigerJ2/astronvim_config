@@ -324,6 +324,20 @@ return {
       },
     },
     -- A custom `on_attach` function to be run after the default `on_attach` function
-    on_attach = function(client, bufnr) end,
+    on_attach = function(client, bufnr)
+      -- Silence the type checker in tests/. aiida projects don't type-check
+      -- tests (mypy excludes them; basedpyright isn't a CI tool), and plumpy's
+      -- dynamic attributes (process.ctx, ...) flood test files with
+      -- reportAttributeAccessIssue / reportUnknown* noise. ruff still runs, so
+      -- real errors (undefined names, etc.) are still surfaced.
+      if client.name == "basedpyright" or client.name == "pyright" then
+        if vim.api.nvim_buf_get_name(bufnr):match "/tests/" then
+          for _, is_pull in ipairs { false, true } do
+            local ok, ns = pcall(vim.lsp.diagnostic.get_namespace, client.id, is_pull)
+            if ok and ns then vim.diagnostic.enable(false, { bufnr = bufnr, ns_id = ns }) end
+          end
+        end
+      end
+    end,
   },
 }

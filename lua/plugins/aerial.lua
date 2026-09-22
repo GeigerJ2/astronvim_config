@@ -10,6 +10,13 @@ return {
     -- SSH_CONNECTION is the signal; inside the persistent tmux server it only
     -- reaches nvim because tmux.conf lists it in `update-environment` (so nvim
     -- must be launched after attaching over SSH). Still toggle with <leader>lS.
+    -- Always dock the outline on the right. Aerial's default "prefer_right" picks
+    -- the side from the focused window's position (right only if it is the
+    -- rightmost split, else left), so the outline jumps sides depending on where
+    -- you open it. A fixed "right" keeps it put.
+    opts.layout = opts.layout or {}
+    opts.layout.default_direction = "right"
+
     local is_remote = vim.env.SSH_CONNECTION ~= nil or vim.env.SSH_TTY ~= nil
     opts.open_automatic = function(bufnr)
       if is_remote then return false end

@@ -34,6 +34,12 @@ return {
     null_ls.setup {
       sources = {
         null_ls.builtins.diagnostics.mypy.with {
+          -- aiida-core's pre-commit excludes tests/ from mypy (dynamic plumpy
+          -- attributes, fixtures, etc. never type-check cleanly), so match that
+          -- in-editor and skip test files rather than flooding them.
+          runtime_condition = function(params)
+            return not params.bufname:match "/tests/"
+          end,
           -- Run mypy from the project venv so plugins (pydantic.mypy, etc.) are available
           command = function()
             local python = get_python_path()
