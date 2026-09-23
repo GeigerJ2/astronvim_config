@@ -467,14 +467,23 @@ vim.api.nvim_create_autocmd("FileType", {
       if not vim.api.nvim_buf_is_valid(ev.buf) then return end
       local ok, move = pcall(require, "nvim-treesitter-textobjects.move")
       if not ok then return end
-      local q = { "@function.outer", "@class.outer" }
+      -- Prefer the `defjumps` query group where it exists (currently python): it
+      -- matches the bare def/class node, so the motion lands on the keyword line
+      -- and skips decorators, instead of stopping on every @decorator the way
+      -- @function.outer/@class.outer do (those capture the decorated_definition
+      -- too). Fall back to textobjects for languages without a defjumps query.
+      local lang = vim.treesitter.language.get_lang(ev.match) or ev.match
+      local q, grp = { "@function.outer", "@class.outer" }, "textobjects"
+      if vim.treesitter.query.get(lang, "defjumps") then
+        q, grp = { "@def" }, "defjumps"
+      end
       local function map(lhs, fn, desc)
         vim.keymap.set({ "n", "x", "o" }, lhs, fn, { buffer = ev.buf, silent = true, desc = desc })
       end
-      map("]]", function() move.goto_next_start(q, "textobjects") end, "Next function/class")
-      map("[[", function() move.goto_previous_start(q, "textobjects") end, "Prev function/class")
-      map("][", function() move.goto_next_end(q, "textobjects") end, "Next function/class end")
-      map("[]", function() move.goto_previous_end(q, "textobjects") end, "Prev function/class end")
+      map("]]", function() move.goto_next_start(q, grp) end, "Next function/class")
+      map("[[", function() move.goto_previous_start(q, grp) end, "Prev function/class")
+      map("][", function() move.goto_next_end(q, grp) end, "Next function/class end")
+      map("[]", function() move.goto_previous_end(q, grp) end, "Prev function/class end")
 
       -- Semantic selection (the new nvim-treesitter dropped the incremental_selection
       -- module): vaf/vif select a function, vac/vic a class. daf/yaf etc. also work.

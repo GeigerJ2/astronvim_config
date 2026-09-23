@@ -78,6 +78,49 @@ return {
       end
     end
 
+    -- `R` in the file-history panel (:ReviewCommits) refetches the log, which is
+    -- how a folded-in change (amend / rebase --autosquash) shows up. Diffview's
+    -- default then jumps to the first commit's first file, losing your place.
+    -- Restore it: snapshot the position by commit INDEX + file PATH (the SHAs are
+    -- rewritten, so the old entry object is gone, but the Nth commit -- same count
+    -- -- and the path survive), then re-select after the refetch. set_file(_, false)
+    -- reopens that diff and highlights the entry without leaving the panel.
+    local function refresh_keep_pos()
+      local vlib = require "diffview.lib"
+      local v = vlib.get_current_view()
+      if not (v and v.panel and v.panel.update_entries) then return end
+      local panel = v.panel
+      local cur_entry, cur_file = panel.cur_item[1], panel.cur_item[2]
+      local idx
+      if cur_entry then
+        for i, e in ipairs(panel.entries) do
+          if e == cur_entry then
+            idx = i
+            break
+          end
+        end
+      end
+      local path = cur_file and cur_file.path or nil
+      panel:update_entries(function()
+        local entries = panel.entries
+        if not entries or #entries == 0 then return end
+        local entry = (idx and entries[idx]) or entries[1]
+        local file
+        if entry and entry.files then
+          if path then
+            for _, f in ipairs(entry.files) do
+              if f.path == path then
+                file = f
+                break
+              end
+            end
+          end
+          file = file or entry.files[1]
+        end
+        if file then v:set_file(file, false) end
+      end)
+    end
+
     opts.keymaps = opts.keymaps or {}
     local view = opts.keymaps.view or {}
     vim.list_extend(view, {
@@ -107,6 +150,13 @@ return {
       })
       opts.keymaps[panel] = maps
     end
+
+    -- Position-preserving refresh, only for the commit-review panel.
+    local fhp = opts.keymaps.file_history_panel or {}
+    vim.list_extend(fhp, {
+      { "n", "R", refresh_keep_pos, { desc = "Refresh, keep position" } },
+    })
+    opts.keymaps.file_history_panel = fhp
 
     return opts
   end,
