@@ -59,6 +59,13 @@ return {
           end,
           desc = "Symbols outline (stays closed)",
         }
+        -- Floating breadcrumb navigator: j/k between siblings (with live
+        -- preview), h to the parent symbol, l into children, <CR> jumps. The
+        -- keyboard equivalent of clicking the winbar breadcrumbs.
+        opts.mappings.n["<Leader>ln"] = {
+          function() require("aerial").nav_toggle() end,
+          desc = "Navigate symbols (aerial)",
+        }
       end,
     },
   },

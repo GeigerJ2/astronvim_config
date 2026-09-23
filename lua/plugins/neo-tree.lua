@@ -182,28 +182,6 @@ return {
       end
     end
 
-    -- The main editor window: the one showing a normal (buftype="") buffer, i.e.
-    -- NOT neo-tree / aerial / help / other plugin panes (those are "nofile"). nil
-    -- if only the tree is open. Picking by buftype (not "first non-neo-tree win")
-    -- matters once aerial auto-opens, else its pane gets mistaken for the editor.
-    local function editor_win()
-      for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-        if vim.bo[vim.api.nvim_win_get_buf(w)].buftype == "" then return w end
-      end
-      return nil
-    end
-
-    -- Open a path as a plain buffer in the editor window, so PR files are read
-    -- full-width -- no octo side-by-side split. Splits if the tree is the only win.
-    local function open_in_editor(path)
-      local w = editor_win()
-      if w then
-        vim.api.nvim_win_call(w, function() vim.cmd("edit " .. vim.fn.fnameescape(path)) end)
-      else
-        vim.cmd("botright vsplit " .. vim.fn.fnameescape(path))
-      end
-    end
-
     local function navigate_pr(direction)
       return function(state)
         local files, err = get_pr_files()
@@ -211,40 +189,58 @@ return {
           vim.notify("No PR files: " .. (err or "list is empty"), vim.log.levels.WARN)
           return
         end
-        -- Cycle relative to the file open in the editor (what you're reading). If
-        -- none is open yet, the first ]g opens files[1] and [g opens the last.
-        local ew = editor_win()
-        local current = ew and vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(ew)) or ""
-        -- Cycle by position in the tree-ordered list, wrapping at the ends.
+        -- Cycle relative to the file under the TREE cursor, so ]g / [g just walk
+        -- the changed files in the tree without opening anything (open with <CR>).
+        local node = state.tree and state.tree:get_node()
+        local cur = node and node.path or nil
+        local target
         local idx
-        for i, f in ipairs(files) do
-          if f == current then
-            idx = i
-            break
+        if cur then
+          for i, f in ipairs(files) do
+            if f == cur then
+              idx = i
+              break
+            end
           end
         end
-        local target
-        if idx == nil then
-          target = direction == "next" and files[1] or files[#files]
-        elseif direction == "next" then
-          target = files[idx + 1] or files[1]
+        if idx ~= nil then
+          -- On a PR file: step to the next / previous one, wrapping at the ends.
+          target = direction == "next" and (files[idx + 1] or files[1]) or (files[idx - 1] or files[#files])
+        elseif cur ~= nil then
+          -- On a dir or an unchanged file: jump to the nearest PR file in the
+          -- travel direction by tree order (tree_order(a, b) = a sorts before b).
+          if direction == "next" then
+            for _, f in ipairs(files) do
+              if tree_order(cur, f) then
+                target = f
+                break
+              end
+            end
+            target = target or files[1]
+          else
+            for i = #files, 1, -1 do
+              if tree_order(files[i], cur) then
+                target = files[i]
+                break
+              end
+            end
+            target = target or files[#files]
+          end
         else
-          target = files[idx - 1] or files[#files]
+          target = direction == "next" and files[1] or files[#files]
         end
         if not target then return end
-        -- Point gitsigns at the PR base so the opened file shows a colored sign
-        -- column of everything the PR changed (vs HEAD, committed changes would
-        -- show nothing). Then open the file plain in the editor window.
+        -- Keep gitsigns pointed at the PR base so a file opened later (via <CR>)
+        -- shows the whole-PR change in its sign column, not just vs HEAD.
         sync_gitsigns_base()
-        open_in_editor(target)
-        -- Move the tree cursor onto the target so the selection follows what's
-        -- open. neo-tree's reveal command loses the cursor when it has to expand
-        -- collapsed parent dirs on a cold scan (the re-render resets to the top,
-        -- so the FIRST ]g never moved). Drive navigate directly and re-focus the
-        -- node in its completion callback, i.e. AFTER the scan + render settle.
-        -- We stay in the tree window throughout, so focus never leaves it.
+        -- Move the tree cursor onto target without opening it. navigate scans the
+        -- (possibly cold) subdir so the node exists; expand_to_node then force-opens
+        -- the ancestor dirs so the cursor lands even on the first visit, where a
+        -- plain focus_node would bail and leave the cursor at the top level.
+        local renderer = require "neo-tree.ui.renderer"
         require("neo-tree.sources.manager").navigate(state, nil, target, function()
-          require("neo-tree.ui.renderer").focus_node(state, target)
+          renderer.expand_to_node(state, target)
+          renderer.focus_node(state, target, true)
         end, false)
       end
     end
@@ -317,11 +313,7 @@ return {
     opts.event_handlers = opts.event_handlers or {}
     table.insert(opts.event_handlers, { event = "before_render", handler = refresh_pr_stats })
 
-    -- Register pr_stats under the filesystem source, NOT top-level: neo-tree
-    -- resolves a renderer's component names against the source's components
-    -- table, so a top-level component renders as "Component pr_stats not found".
-    opts.filesystem.components = opts.filesystem.components or {}
-    opts.filesystem.components.pr_stats = function(_, node, _)
+    local function pr_stats_component(_, node, _)
       if node.type ~= "file" then return {} end
       local s = pr_stats[node.path]
       if s == nil then return {} end
@@ -331,19 +323,31 @@ return {
       }
     end
 
-    -- Append pr_stats (right-aligned) to the file renderer's container, copying
-    -- the live default so icons / name / git-status stay intact. Set on the
-    -- filesystem source too: neo-tree filters out unknown components when it
-    -- copies a *global* renderer into a source, which would drop pr_stats.
-    local file_renderer = vim.deepcopy(require("neo-tree.defaults").renderers.file)
-    for _, comp in ipairs(file_renderer) do
-      if comp[1] == "container" and comp.content then
-        table.insert(comp.content, { "pr_stats", zindex = 15, align = "right" })
-        break
+    -- Copy the live default file renderer (so icons / name / git-status stay
+    -- intact) and append pr_stats, right-aligned, to its container.
+    local function file_renderer_with_stats()
+      local renderer = vim.deepcopy(require("neo-tree.defaults").renderers.file)
+      for _, comp in ipairs(renderer) do
+        if comp[1] == "container" and comp.content then
+          table.insert(comp.content, { "pr_stats", zindex = 15, align = "right" })
+          break
+        end
       end
+      return renderer
     end
-    opts.filesystem.renderers = opts.filesystem.renderers or {}
-    opts.filesystem.renderers.file = file_renderer
+
+    -- Register on each source that shows PR files, NOT top-level: neo-tree
+    -- resolves a renderer's component names against the source's own components
+    -- table (a top-level component renders as "Component pr_stats not found"),
+    -- and filters out unknown components when copying a global renderer into a
+    -- source. filesystem = the rev/wt sidebar; git_status = :PRTree.
+    for _, src in ipairs { "filesystem", "git_status" } do
+      opts[src] = opts[src] or {}
+      opts[src].components = opts[src].components or {}
+      opts[src].components.pr_stats = pr_stats_component
+      opts[src].renderers = opts[src].renderers or {}
+      opts[src].renderers.file = file_renderer_with_stats()
+    end
 
     return opts
   end,
