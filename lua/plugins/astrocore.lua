@@ -163,6 +163,32 @@ local function open_path_in_editor()
 end
 
 ---@type LazySpec
+-- Window navigation for <C-j>/<C-k> that WRAPS at the column edges, so from the
+-- claude split at the bottom of the editor column <C-j> lands back on the editor
+-- above (there is nothing below it), instead of AstroNvim's plain <C-w>j that
+-- just stays put. wincmd j/k only ever moves within the current column, so the
+-- wrap never jumps into the neo-tree sidebar. Floating windows pass the key
+-- through, matching AstroNvim's term_nav.
+local function win_nav_wrap(dir)
+  return function()
+    if vim.api.nvim_win_get_config(0).zindex then
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-" .. dir .. ">", true, false, true), "n", false)
+      return
+    end
+    local start = vim.api.nvim_get_current_win()
+    vim.cmd.wincmd(dir)
+    if vim.api.nvim_get_current_win() ~= start then return end
+    -- At the edge: walk as far as possible the other way to reach the far window
+    -- in this column (the top for <C-j>, the bottom for <C-k>).
+    local opposite = dir == "j" and "k" or "j"
+    local prev
+    repeat
+      prev = vim.api.nvim_get_current_win()
+      vim.cmd.wincmd(opposite)
+    until vim.api.nvim_get_current_win() == prev
+  end
+end
+
 return {
   "AstroNvim/astrocore",
   ---@type AstroCoreOpts
@@ -476,6 +502,11 @@ return {
         -- which-key group label for the claudecode.nvim maps (defined in
         -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
         ["<Leader>a"] = { desc = "󰚩 AI/Claude Code" },
+
+        -- Wrap-around vertical window nav (overrides AstroNvim's plain <C-w>j/k).
+        -- Also covers terminal-normal mode (claude with auto_insert=false).
+        ["<C-j>"] = { win_nav_wrap "j", desc = "Move to below split (wrap)" },
+        ["<C-k>"] = { win_nav_wrap "k", desc = "Move to above split (wrap)" },
 
         -- <Leader>W: overlay a big number on every split and jump to the one you
         -- press. Uses nvim-window-picker (already a neo-tree dep). filter_func
@@ -864,6 +895,12 @@ return {
         -- Replace selection with system clipboard contents; send the
         -- replaced text to the black hole so it doesn't clobber "+.
         ["<C-v>"] = { '"_d"+P', desc = "Paste from system clipboard" },
+      },
+      t = {
+        -- Wrap-around window nav from terminal-INSERT (typing to Claude), same as
+        -- the normal-mode maps above. wincmd from a terminal auto-leaves insert.
+        ["<C-J>"] = { win_nav_wrap "j", desc = "Terminal down window navigation (wrap)" },
+        ["<C-K>"] = { win_nav_wrap "k", desc = "Terminal up window navigation (wrap)" },
       },
       i = {
         ["<C-v>"] = { "<C-r><C-o>+", desc = "Paste from system clipboard" },
