@@ -504,9 +504,20 @@ return {
         ["<Leader>a"] = { desc = "󰚩 AI/Claude Code" },
 
         -- Wrap-around vertical window nav (overrides AstroNvim's plain <C-w>j/k).
-        -- Also covers terminal-normal mode (claude with auto_insert=false).
-        ["<C-j>"] = { win_nav_wrap "j", desc = "Move to below split (wrap)" },
-        ["<C-k>"] = { win_nav_wrap "k", desc = "Move to above split (wrap)" },
+        -- Also covers terminal-normal mode (claude with auto_insert=false). Use the
+        -- SAME uppercase keys AstroNvim uses (<C-J>/<C-K>): <C-j> is the <NL>
+        -- keycode, and a lowercase entry lands in a different slot than AstroNvim's
+        -- uppercase one, so it never wins the collision and Ctrl-J kept the plain
+        -- (no-wrap) map. Matching the key overrides it outright.
+        ["<C-J>"] = { win_nav_wrap "j", desc = "Move to below split (wrap)" },
+        ["<C-K>"] = { win_nav_wrap "k", desc = "Move to above split (wrap)" },
+
+        -- Visual command palette: fuzzy-search every :command in a floating
+        -- snacks.picker list and run it, instead of typing at the cmdline. <CR>
+        -- runs commands that take no args, or drops the rest into the cmdline to
+        -- finish. (<Leader>; is the past-commands twin.)
+        ["<Leader>:"] = { function() require("snacks").picker.commands() end, desc = "Command palette" },
+        ["<Leader>;"] = { function() require("snacks").picker.command_history() end, desc = "Command history" },
 
         -- <Leader>W: overlay a big number on every split and jump to the one you
         -- press. Uses nvim-window-picker (already a neo-tree dep). filter_func

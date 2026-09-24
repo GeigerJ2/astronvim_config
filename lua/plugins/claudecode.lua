@@ -23,7 +23,31 @@ return {
       -- split sits under the editor column only and neo-tree keeps its full height
       -- on the left (relative="editor" would `botright` full-width, covering under
       -- neo-tree). height ~45% since Claude is used a lot.
-      snacks_win_opts = { position = "bottom", height = 0.45, relative = "win" },
+      snacks_win_opts = {
+        position = "bottom",
+        height = 0.45,
+        relative = "win",
+        -- In the <Leader>gc / :ReviewCommits diffview tab, the split is wedged
+        -- between the diff panes and the file-history panel, so 45% of the
+        -- focused window comes out tiny. When Claude opens in a diffview tab, size
+        -- it so the commit list (file-history panel) AND Claude together take the
+        -- bottom half of the tab: claude = 50% of the tab minus the panel's 12
+        -- rows (its win_config height in diffview.lua), leaving the diff panes the
+        -- top half. Elsewhere the configured 45% stands. Scheduled so it runs
+        -- after the diffview layout settles.
+        on_win = function(self)
+          local ok, lib = pcall(require, "diffview.lib")
+          if not (ok and lib.get_current_view()) then return end
+          local win = self.win
+          vim.schedule(function()
+            if win and vim.api.nvim_win_is_valid(win) then
+              local usable = vim.o.lines - vim.o.cmdheight
+              local file_history_rows = 12 -- mirrors file_history_panel.win_config in diffview.lua
+              vim.api.nvim_win_set_height(win, math.max(6, math.floor(usable * 0.5) - file_history_rows))
+            end
+          end)
+        end,
+      },
       -- Land in terminal-normal mode, not insert, when the split is focused, so
       -- nvim keymaps (<leader> etc.) take precedence there. Press i/a to type to
       -- Claude, <C-\><C-n> to leave insert back to normal.
