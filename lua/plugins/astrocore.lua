@@ -163,12 +163,19 @@ local function open_path_in_editor()
 end
 
 ---@type LazySpec
+-- Sidebars the rightmost-preference below must never land on.
+local win_nav_sidebars = { aerial = true, ["neo-tree"] = true }
+
 -- Window navigation for <C-j>/<C-k> that WRAPS at the column edges, so from the
 -- claude split at the bottom of the editor column <C-j> lands back on the editor
 -- above (there is nothing below it), instead of AstroNvim's plain <C-w>j that
 -- just stays put. wincmd j/k only ever moves within the current column, so the
 -- wrap never jumps into the neo-tree sidebar. Floating windows pass the key
 -- through, matching AstroNvim's term_nav.
+--
+-- After a wrap, if the row landed on is a vertical split (e.g. diffview's
+-- old|new panes) prefer its rightmost real window, the new-code side, skipping
+-- sidebars so a normal editor+aerial layout still lands on the editor.
 local function win_nav_wrap(dir)
   return function()
     if vim.api.nvim_win_get_config(0).zindex then
@@ -186,6 +193,17 @@ local function win_nav_wrap(dir)
       prev = vim.api.nvim_get_current_win()
       vim.cmd.wincmd(opposite)
     until vim.api.nvim_get_current_win() == prev
+    -- Prefer the rightmost real window in the wrapped-to row (new-code pane).
+    while true do
+      local cur = vim.api.nvim_get_current_win()
+      vim.cmd.wincmd "l"
+      local moved = vim.api.nvim_get_current_win()
+      if moved == cur then break end
+      if win_nav_sidebars[vim.bo[vim.api.nvim_win_get_buf(moved)].filetype] then
+        vim.api.nvim_set_current_win(cur) -- stepped into a sidebar; step back
+        break
+      end
+    end
   end
 end
 
@@ -518,6 +536,13 @@ return {
         -- finish. (<Leader>; is the past-commands twin.)
         ["<Leader>:"] = { function() require("snacks").picker.commands() end, desc = "Command palette" },
         ["<Leader>;"] = { function() require("snacks").picker.command_history() end, desc = "Command history" },
+
+        -- Live grep with tests/ excluded (any depth), so you just type the pattern.
+        -- exclude -> rg `-g '!**/tests/**'`. <Leader>fw is the unfiltered twin.
+        ["<Leader>fx"] = {
+          function() require("snacks").picker.grep { exclude = { "**/tests/**" } } end,
+          desc = "Grep (exclude tests/)",
+        },
 
         -- <Leader>W: overlay a big number on every split and jump to the one you
         -- press. Uses nvim-window-picker (already a neo-tree dep). filter_func
