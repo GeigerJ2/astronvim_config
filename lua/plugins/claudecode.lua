@@ -19,14 +19,16 @@ return {
       -- (the native fallback only does left/right); snacks_win_opts overrides the
       -- provider's default position/size.
       provider = "snacks",
-      -- position=bottom with relative="win" makes snacks use `belowright`, so the
-      -- split sits under the editor column only and neo-tree keeps its full height
-      -- on the left (relative="editor" would `botright` full-width, covering under
-      -- neo-tree). height ~45% since Claude is used a lot.
+      -- position=bottom with relative="editor" makes snacks use `botright`: a
+      -- FULL-WIDTH bottom split spanning under both neo-tree (left) and aerial
+      -- (right). Full width matters for tmux line-selection/copy-mode: a split
+      -- narrower than the terminal makes tmux's line selects cut across the
+      -- sidebar columns and garble. (relative="win" would confine it to the
+      -- editor column.) height ~45% since Claude is used a lot.
       snacks_win_opts = {
         position = "bottom",
         height = 0.45,
-        relative = "win",
+        relative = "editor",
         -- In the <Leader>gc / :ReviewCommits diffview tab, the split is wedged
         -- between the diff panes and the file-history panel, so 45% of the
         -- focused window comes out tiny. When Claude opens in a diffview tab, size

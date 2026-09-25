@@ -521,6 +521,31 @@ return {
         -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
         ["<Leader>a"] = { desc = "󰚩 AI/Claude Code" },
 
+        -- Toggle the CURRENT buffer's gitsigns base. Default is the PR merge-base
+        -- (whole-PR gutter + working ]g/[g hunk-nav, but blame reads "Not Committed
+        -- Yet" on PR lines). Toggle to HEAD when you need accurate <Leader>gl blame;
+        -- a fresh buffer defaults back to the merge-base. See gitsigns.lua.
+        ["<Leader>gB"] = {
+          function()
+            local gs = require "gitsigns"
+            if vim.b.gitsigns_pr_base then
+              gs.change_base(nil) -- buffer-local -> HEAD/index
+              vim.b.gitsigns_pr_base = false
+              vim.notify("gitsigns base -> HEAD (blame accurate; ]g = uncommitted)", vim.log.levels.INFO)
+            else
+              local mb = resolve_review_base()
+              if mb == "" then
+                vim.notify("gitsigns: could not resolve a merge-base", vim.log.levels.WARN)
+                return
+              end
+              gs.change_base(mb) -- buffer-local -> PR merge-base
+              vim.b.gitsigns_pr_base = true
+              vim.notify("gitsigns base -> PR merge-base " .. mb:sub(1, 8) .. " (whole-PR gutter; ]g = PR)", vim.log.levels.INFO)
+            end
+          end,
+          desc = "Toggle gitsigns base (PR merge-base / HEAD)",
+        },
+
         -- Wrap-around vertical window nav (overrides AstroNvim's plain <C-w>j/k).
         -- Also covers terminal-normal mode (claude with auto_insert=false). Use the
         -- SAME uppercase keys AstroNvim uses (<C-J>/<C-K>): <C-j> is the <NL>
