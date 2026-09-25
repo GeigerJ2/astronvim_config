@@ -103,5 +103,23 @@ return {
     if type(opts.statusline) == "table" then
       table.insert(opts.statusline, math.min(3, #opts.statusline + 1), worktree)
     end
+
+    -- Show breadcrumbs (the aerial winbar) in the <Leader>gc / :ReviewCommits
+    -- diffview diff panes. Their blob buffers are nofile/unlisted, so AstroNvim's
+    -- disable_winbar_cb hides the winbar there. Force it on for real code buffers
+    -- (those with a filetype, excluding the Diffview* panels) while a diffview
+    -- view owns the tab; both panes qualify, so their winbars stay row-aligned.
+    -- Everything else falls through to AstroNvim's rule.
+    opts.opts = opts.opts or {}
+    local astro_disable = opts.opts.disable_winbar_cb
+    opts.opts.disable_winbar_cb = function(args)
+      local ok, lib = pcall(require, "diffview.lib")
+      if ok and lib.get_current_view() then
+        local ft = vim.bo[args.buf].filetype
+        if ft ~= "" and not ft:match "^Diffview" then return false end
+      end
+      if astro_disable then return astro_disable(args) end
+      return false
+    end
   end,
 }

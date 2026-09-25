@@ -556,6 +556,14 @@ return {
           function() require("snacks").picker.grep { exclude = { "**/tests/**" } } end,
           desc = "Grep (exclude tests/)",
         },
+        -- Override AstroNvim's <Leader>fW (grep hidden+ignored) to also FOLLOW
+        -- symlinks (rg -L), so grepping from a linked worktree descends into the
+        -- `github/` symlink (which points at the main checkout) and finds its
+        -- content. hidden+ignored already covers github/ being git-excluded.
+        ["<Leader>fW"] = {
+          function() require("snacks").picker.grep { hidden = true, ignored = true, follow = true } end,
+          desc = "Find words (hidden/ignored, follow symlinks)",
+        },
 
         -- <Leader>W: overlay a big number on every split and jump to the one you
         -- press. Uses nvim-window-picker (already a neo-tree dep). filter_func
