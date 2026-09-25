@@ -535,7 +535,20 @@ return {
         -- runs commands that take no args, or drops the rest into the cmdline to
         -- finish. (<Leader>; is the past-commands twin.)
         ["<Leader>:"] = { function() require("snacks").picker.commands() end, desc = "Command palette" },
-        ["<Leader>;"] = { function() require("snacks").picker.command_history() end, desc = "Command history" },
+        ["<Leader>;"] = {
+          function()
+            require("snacks").picker.command_history {
+              -- Run the picked command straight away instead of snacks' default
+              -- (drop it back in the cmdline to edit): a history entry is already
+              -- a complete command. <Leader>: keeps fill-and-edit for new ones.
+              confirm = function(picker, item)
+                picker:close()
+                if item and item.cmd then vim.schedule(function() vim.cmd(item.cmd) end) end
+              end,
+            }
+          end,
+          desc = "Command history (run)",
+        },
 
         -- Live grep with tests/ excluded (any depth), so you just type the pattern.
         -- exclude -> rg `-g '!**/tests/**'`. <Leader>fw is the unfiltered twin.
