@@ -248,6 +248,12 @@ return {
           callback = function()
             vim.opt_local.colorcolumn = "51,73"
             vim.opt_local.textwidth = 72
+            -- markdown sets a formatexpr, which makes `gq` ignore textwidth and
+            -- not reflow. Clear formatexpr/formatprg so `gq` (e.g. `gqip` on the
+            -- body, or visual `gq`) wraps commit bodies to 72 columns. The 50-col
+            -- subject stays a manual/colorcolumn guide; gq uses one width only.
+            vim.opt_local.formatexpr = ""
+            vim.opt_local.formatprg = ""
           end,
         },
       },
