@@ -122,6 +122,25 @@ return {
   config = function(_, opts)
     require("octo").setup(opts)
 
+    -- ]t / [t: next / previous review thread ACROSS files. octo's built-in
+    -- next_thread/prev_thread only walk the current file, and octo maps action
+    -- names (not functions), so override the keys buffer-locally in every
+    -- review-diff buffer to drive octo_goto_thread. octo_diff_props is set at
+    -- buffer creation, so it marks review diffs reliably even before diffthis /
+    -- filetype run. Scheduled so it lands after octo's own buffer-local maps.
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      group = vim.api.nvim_create_augroup("octo_thread_nav", { clear = true }),
+      desc = "]t/[t cross-file review-thread nav in octo review diffs",
+      callback = function(args)
+        if vim.b[args.buf].octo_diff_props == nil then return end
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(args.buf) then return end
+          vim.keymap.set("n", "]t", function() octo_goto_thread(1) end, { buffer = args.buf, desc = "Octo: next review thread (any file)" })
+          vim.keymap.set("n", "[t", function() octo_goto_thread(-1) end, { buffer = args.buf, desc = "Octo: prev review thread (any file)" })
+        end)
+      end,
+    })
+
     -- Keep :Octo review readable. octo mirrors GitHub with green/red diff
     -- backgrounds of its own: changed *text* via OctoReviewDiffAdd/DeleteText
     -- (white on dark green/red), and changed *lines* link DiffChange ->
@@ -292,17 +311,6 @@ return {
       "<localleader>os",
       function() require("octo.utils").create_base_search_command { include_current_repo = true } end,
       desc = "Search GitHub",
-    },
-    -- Cross-file thread navigation (octo's ]t/[t only move within one file).
-    {
-      "<localleader>ot",
-      function() octo_goto_thread(1) end,
-      desc = "Octo: next review thread (any file)",
-    },
-    {
-      "<localleader>oT",
-      function() octo_goto_thread(-1) end,
-      desc = "Octo: prev review thread (any file)",
     },
     -- Jump to local file at current line in a new tab
     {
