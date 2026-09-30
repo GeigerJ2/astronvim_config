@@ -25,14 +25,16 @@ return {
   -- it and forwards to the real `coderabbit`. Drop this once the plugin is fixed.
   opts = { cli = { binary = "coderabbit-nvim" } },
   keys = {
-    { "<Leader>gr", desc = "󰋚 CodeRabbit" },
-    { "<Leader>grr", "<Cmd>CodeRabbitReview all<CR>", desc = "Review all changes" },
-    { "<Leader>gru", "<Cmd>CodeRabbitReview uncommitted<CR>", desc = "Review uncommitted" },
-    { "<Leader>grc", "<Cmd>CodeRabbitReview committed<CR>", desc = "Review committed (branch)" },
-    { "<Leader>grs", "<Cmd>CodeRabbitShow<CR>", desc = "Show last review summary" },
-    { "<Leader>grq", "<Cmd>CodeRabbitQuickfix<CR>", desc = "Findings to quickfix" },
-    { "<Leader>grh", "<Cmd>CodeRabbitHistory<CR>", desc = "Review history" },
-    { "<Leader>grx", "<Cmd>CodeRabbitClear<CR>", desc = "Clear findings" },
-    { "<Leader>grX", "<Cmd>CodeRabbitStop<CR>", desc = "Stop running review" },
+    -- Under the <leader>a AI group (with claudecode + pi). claude owns bare
+    -- <leader>ac/<leader>ar, so CodeRabbit gets the <leader>aR subgroup (R = Rabbit).
+    { "<Leader>aR", desc = "󰋚 CodeRabbit" },
+    { "<Leader>aRr", "<Cmd>CodeRabbitReview all<CR>", desc = "Review all changes" },
+    { "<Leader>aRu", "<Cmd>CodeRabbitReview uncommitted<CR>", desc = "Review uncommitted" },
+    { "<Leader>aRc", "<Cmd>CodeRabbitReview committed<CR>", desc = "Review committed (branch)" },
+    { "<Leader>aRs", "<Cmd>CodeRabbitShow<CR>", desc = "Show last review summary" },
+    { "<Leader>aRq", "<Cmd>CodeRabbitQuickfix<CR>", desc = "Findings to quickfix" },
+    { "<Leader>aRh", "<Cmd>CodeRabbitHistory<CR>", desc = "Review history" },
+    { "<Leader>aRx", "<Cmd>CodeRabbitClear<CR>", desc = "Clear findings" },
+    { "<Leader>aRX", "<Cmd>CodeRabbitStop<CR>", desc = "Stop running review" },
   },
 }
