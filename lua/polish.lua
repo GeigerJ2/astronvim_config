@@ -452,6 +452,25 @@ vim.api.nvim_create_user_command(
   { nargs = 1, complete = "dir", desc = "Open a directory as a new tab (adds a root to the session)" }
 )
 
+-- Auto-LOAD the cwd's dir session on startup, so opening nvim in a worktree
+-- restores that worktree's layout without pressing <Leader>S.. resession only
+-- auto-SAVES the dir session (autosave.cwd = true in _astrocore.lua); this adds
+-- the load half. Guards mirror auto-session: only when launched with no file
+-- arguments (so `nvim file.py` opens the file, not a layout), and only when a dir
+-- session actually exists for the cwd (a fresh or removed worktree opens empty).
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = vim.api.nvim_create_augroup("resession_autoload_cwd", { clear = true }),
+  desc = "Auto-load the cwd's resession dir session on startup",
+  nested = true,
+  callback = function()
+    if vim.fn.argc(-1) ~= 0 then return end
+    local ok, resession = pcall(require, "resession")
+    -- silence_errors makes a missing dir session a no-op (load returns before it
+    -- touches the layout), so no separate existence check is needed.
+    if ok then resession.load(vim.uv.cwd(), { dir = "dirsession", silence_errors = true }) end
+  end,
+})
+
 -- ]] / [[ / ][ / [] jump to the next/prev FUNCTION or CLASS, treesitter-based so
 -- they work at any indentation (methods!) and in every language with a parser --
 -- unlike Vim's built-in per-filetype motions (python's match only column 0).
