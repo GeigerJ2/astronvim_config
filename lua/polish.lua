@@ -423,6 +423,9 @@ vim.keymap.set(
   function() open_or_search(visual_selection()) end,
   { desc = "Search selection in browser" }
 )
+-- AstroNvim's fuzzy buffer list normally lives on <Leader>fb; the browser search
+-- above takes that key, so the picker moves to <Leader>fB.
+vim.keymap.set("n", "<Leader>fB", function() require("snacks").picker.buffers() end, { desc = "Find buffers" })
 
 vim.api.nvim_create_user_command(
   "SearchWeb",
