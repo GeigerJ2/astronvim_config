@@ -33,6 +33,8 @@ return {
       if vim.wo.diff then return false end
       -- octo:// issue / PR / panel buffers (filetype "octo", "octo_panel").
       if vim.startswith(vim.bo[bufnr].filetype, "octo") then return false end
+      -- Patch files (filetype "diff"): an outline of hunks adds nothing.
+      if vim.bo[bufnr].filetype == "diff" or vim.api.nvim_buf_get_name(bufnr):match "%.patch$" then return false end
       -- Otherwise defer to aerial's buffer-ignore rules (special / unlisted
       -- buftypes, etc.). maybe_open_automatic also requires a symbol backend, so
       -- files without LSP/treesitter symbols won't pop the outline open.

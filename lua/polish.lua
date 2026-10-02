@@ -528,3 +528,117 @@ vim.api.nvim_create_autocmd("FileType", {
     end)
   end,
 })
+
+-- :PatchView [file]: rich view of a patch. Runs it through delta (side-by-side,
+-- line numbers, as in the terminal) in a new tab; with no argument the current
+-- buffer is rendered from its text, saved or not. `q` closes the tab.
+vim.api.nvim_create_user_command("PatchView", function(opts)
+  local file = opts.args
+  if file == "" then
+    file = vim.fn.tempname() .. ".patch"
+    vim.fn.writefile(vim.api.nvim_buf_get_lines(0, 0, -1, false), file)
+  elseif vim.fn.filereadable(file) == 0 then
+    vim.notify("PatchView: cannot read " .. file, vim.log.levels.ERROR)
+    return
+  end
+  vim.cmd "tabnew"
+  vim.fn.termopen { "sh", "-c", 'delta --paging=never < "$1"', "sh", file }
+  vim.bo.buflisted = false
+  vim.cmd "stopinsert"
+  vim.keymap.set(
+    "n",
+    "q",
+    "<Cmd>tabclose<CR>",
+    { buffer = true, silent = true, nowait = true, desc = "Close patch view" }
+  )
+end, { nargs = "?", complete = "file", desc = "Rich (delta) view of a patch file or the current buffer" })
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "diff",
+  callback = function(ev)
+    vim.keymap.set("n", "<LocalLeader>v", "<Cmd>PatchLive<CR>", { buffer = ev.buf, desc = "Live rich patch view (delta)" })
+  end,
+})
+
+-- :PatchLive: live rich view of the current diff/patch buffer in a split below
+-- it. Every change (debounced) is piped through delta and the coloured output
+-- replaces a read-only preview buffer; baleia.nvim turns delta's ANSI escapes into
+-- highlights. Toggle: run it again, or `q` in the preview.
+local patch_live = {} -- source buffer -> { buf, win, seq, timer }
+local patch_live_baleia
+
+local function patch_live_render(src, state)
+  if not (vim.api.nvim_buf_is_valid(src) and vim.api.nvim_buf_is_valid(state.buf)) then return end
+  local width = vim.api.nvim_win_is_valid(state.win) and vim.api.nvim_win_get_width(state.win) or 120
+  local text = table.concat(vim.api.nvim_buf_get_lines(src, 0, -1, false), "\n") .. "\n"
+  state.seq = state.seq + 1
+  local seq = state.seq
+  vim.system({ "delta", "--paging=never", "--width", tostring(width) }, { stdin = text, text = true }, function(res)
+    vim.schedule(function()
+      if seq ~= state.seq or not vim.api.nvim_buf_is_valid(state.buf) then return end
+      local view
+      if vim.api.nvim_win_is_valid(state.win) then
+        vim.api.nvim_win_call(state.win, function() view = vim.fn.winsaveview() end)
+      end
+      vim.bo[state.buf].modifiable = true
+      vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, vim.split(res.stdout or "", "\n", { plain = true }))
+      patch_live_baleia = patch_live_baleia or require("baleia").setup()
+      patch_live_baleia.once(state.buf)
+      vim.bo[state.buf].modifiable = false
+      if view then vim.api.nvim_win_call(state.win, function() vim.fn.winrestview(view) end) end
+    end)
+  end)
+end
+
+local function patch_live_close(src)
+  local state = patch_live[src]
+  if not state then return end
+  patch_live[src] = nil
+  state.timer:stop()
+  state.timer:close()
+  pcall(vim.api.nvim_del_augroup_by_name, "PatchLive" .. src)
+  if vim.api.nvim_win_is_valid(state.win) then pcall(vim.api.nvim_win_close, state.win, true) end
+end
+
+vim.api.nvim_create_user_command("PatchLive", function()
+  local src = vim.api.nvim_get_current_buf()
+  if patch_live[src] then return patch_live_close(src) end
+
+  local src_win = vim.api.nvim_get_current_win()
+  -- Full-width bottom split: wide enough for delta's side-by-side columns.
+  vim.cmd "botright split"
+  vim.cmd("resize " .. math.floor(vim.o.lines * 0.45))
+  local win = vim.api.nvim_get_current_win()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_win_set_buf(win, buf)
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].modifiable = false
+  for opt, value in pairs { wrap = false, number = false, relativenumber = false, signcolumn = "no", list = false } do
+    vim.wo[win][opt] = value
+  end
+  vim.keymap.set(
+    "n",
+    "q",
+    function() patch_live_close(src) end,
+    { buffer = buf, silent = true, nowait = true, desc = "Close live patch view" }
+  )
+  vim.api.nvim_set_current_win(src_win)
+
+  local state = { buf = buf, win = win, seq = 0, timer = vim.uv.new_timer() }
+  patch_live[src] = state
+  local group = vim.api.nvim_create_augroup("PatchLive" .. src, { clear = true })
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "BufWritePost" }, {
+    group = group,
+    buffer = src,
+    callback = function()
+      state.timer:stop()
+      state.timer:start(150, 0, vim.schedule_wrap(function() patch_live_render(src, state) end))
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = group,
+    buffer = src,
+    callback = function() patch_live_close(src) end,
+  })
+  patch_live_render(src, state)
+end, { desc = "Toggle a live rich (delta) view of the current patch beside it" })
