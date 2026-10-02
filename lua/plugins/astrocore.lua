@@ -628,6 +628,9 @@ return {
         ["<Leader>fn"] = { function() copy_path "name" end, desc = "Copy file name" },
         ["<Leader>fh"] = { function() copy_path "home" end, desc = "Copy file path from home" },
 
+        -- render-markdown.nvim: toggle the rich rendering for the current buffer only
+        ["<Leader>um"] = { "<Cmd>RenderMarkdown buf_toggle<CR>", desc = "Toggle markdown rendering (buffer)" },
+
         -- delete the current file from disk and wipe its buffer, landing on the
         -- alternate buffer (or a fresh empty one) rather than [No Name].
         ["<Leader>fD"] = {
