@@ -4,8 +4,8 @@
 --       as this provides autocomplete and documentation while editing
 
 -- Resolve the base to review the current branch against, as a merge-base SHA:
--- the point where this branch diverged from its base. Shared by :ReviewCommits,
--- :DiffViewPR, :DiffMergeBase and :PRTree so they all agree on "the base",
+-- the point where this branch diverged from its base. Shared by `:ReviewCommits`,
+-- `:DiffviewPR`, `:DiffMergeBase` and `:PRTree`,
 -- whether the branch has a PR or is just a local branch off main.
 --
 -- Base ref, first that resolves wins:
@@ -533,6 +533,8 @@ return {
         -- a fresh buffer defaults back to the merge-base. See gitsigns.lua.
         ["<Leader>gB"] = {
           function()
+            local review_gutter = require "review_pr_gutter"
+            if review_gutter.active() then return review_gutter.toggle() end
             local gs = require "gitsigns"
             if vim.b.gitsigns_pr_base then
               gs.change_base(nil) -- buffer-local -> HEAD/index
@@ -549,7 +551,7 @@ return {
               vim.notify("gitsigns base -> PR merge-base " .. mb:sub(1, 8) .. " (whole-PR gutter; ]g = PR)", vim.log.levels.INFO)
             end
           end,
-          desc = "Toggle gitsigns base (PR merge-base / HEAD)",
+          desc = "Toggle gitsigns base (PR merge-base / HEAD); commit/whole-PR gutter in <Leader>gc",
         },
 
         -- Wrap-around vertical window nav (overrides AstroNvim's plain <C-w>j/k).
@@ -682,9 +684,9 @@ return {
           desc = "Add directory as new tab (session root)",
         },
 
-        -- diffview against PR base (see :DiffViewPR / :DiffMergeBase user commands below)
-        ["<Leader>gd"] = { "<Cmd>DiffViewPR<CR>", desc = "Diff full PR vs base" },
-        ["<Leader>gD"] = { "<Cmd>DiffViewPR %<CR>", desc = "Diff current file vs PR base" },
+        -- Diffview against PR base (see `:DiffviewPR` / `:DiffMergeBase` below).
+        ["<Leader>gd"] = { "<Cmd>DiffviewPR<CR>", desc = "Diff full PR vs base" },
+        ["<Leader>gD"] = { "<Cmd>DiffviewPR %<CR>", desc = "Diff current file vs PR base" },
         ["<Leader>gv"] = { "<Cmd>DiffMergeBase<CR>", desc = "Vsplit current file at PR base (gitsigns)" },
         ["<Leader>gx"] = { "<Cmd>DiffviewClose<CR>", desc = "Close diffview" },
         -- PR-changed files as a tree (single on-disk view); overrides the
@@ -801,10 +803,10 @@ return {
         --   desc = "Search classes (workspace)",
         -- },
         -- Open the full PR (or one file of it) in a Diffview tab.
-        --   :DiffViewPR              → all files
-        --   :DiffViewPR <path>       → just that file
-        --   :DiffViewPR %            → just the current buffer
-        vim.api.nvim_create_user_command("DiffViewPR", function(opts)
+        --   `:DiffviewPR`              → all files
+        --   `:DiffviewPR <path>`       → just that file
+        --   `:DiffviewPR %`            → just the current buffer
+        vim.api.nvim_create_user_command("DiffviewPR", function(opts)
           local merge_base = resolve_review_base()
           local path_arg = opts.args ~= "" and (" -- " .. opts.args) or ""
           vim.cmd("DiffviewOpen " .. merge_base .. "...HEAD" .. path_arg)
@@ -829,6 +831,7 @@ return {
             vim.notify("ReviewCommits: could not resolve a base branch" .. for_base, vim.log.levels.ERROR)
             return
           end
+          vim.g.review_pr_base = merge_base -- read by review_pr_gutter.lua
           vim.cmd("DiffviewFileHistory --range=" .. merge_base .. "..HEAD --no-merges --reverse")
         end, {
           nargs = "?",

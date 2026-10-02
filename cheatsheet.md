@@ -215,7 +215,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `:diffupdate` — refresh; `:diffoff` — turn off
 - `:DiffviewOpen [rev..rev]` — diffview UI (community plugin)
 - `:DiffviewFileHistory %` — file history
-- *Custom:* `:DiffViewPR` — diff against detected PR base (gh → upstream/origin)
+- *Custom:* `:DiffviewPR`. Diff against detected PR base (`gh`, then `upstream`/`origin`).
 
 ---
 
@@ -344,7 +344,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `:DiffviewClose` `:DiffviewToggleFiles` `:DiffviewFocusFiles`
 - `:DiffviewFileHistory %` — history of current file
 - `:DiffviewFileHistory` — history of cwd
-- *Custom:* `:DiffViewPR` — auto-detect PR base
+- *Custom:* `:DiffviewPR`. Auto-detect PR base.
 - Inside: `<Tab>`/`<S-Tab>` next/prev file, `gf` open in tab, `<Leader>e`
   toggle file panel, `g<C-x>` cycle layout, `[x`/`]x` next/prev conflict
 
@@ -491,7 +491,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 
 - `:TabDir <path>` — open directory in new tab with its own `tcd`
 - `:CommitMsg [PR#]` — scratch commit-message buffer (optionally seeded with PR title)
-- `:DiffViewPR` — diffview against detected PR merge-base
+- `:DiffviewPR`. Diffview against detected PR merge-base.
 - `:SaveFolds` / `:LoadFolds` — manual fold persistence (auto-runs already)
 - `:OctoPrEditCurrent` — edit PR for current git branch
 - `:OctoPrChecksCurrent` — show PR checks for current git branch

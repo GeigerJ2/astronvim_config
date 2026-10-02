@@ -642,3 +642,6 @@ vim.api.nvim_create_user_command("PatchLive", function()
   })
   patch_live_render(src, state)
 end, { desc = "Toggle a live rich (delta) view of the current patch beside it" })
+
+require("review_pr_gutter").setup()
+require("diffview_lsp").setup()
