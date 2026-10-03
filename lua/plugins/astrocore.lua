@@ -597,6 +597,25 @@ return {
           function() require("snacks").picker.grep { hidden = true, ignored = true, follow = true } end,
           desc = "Find words (hidden/ignored, follow symlinks)",
         },
+        -- ]q / [q: next / previous changed file (committed on this branch, modified
+        -- or untracked: lua/pr_files.lua), the same keys octo, diffview and the PR
+        -- tree use. While a quickfix window is open they keep their default job
+        -- (:cnext / :cprev), so quickfix navigation still works there.
+        ["]q"] = {
+          function() require("review_files_nav").step "next" end,
+          desc = "Next changed file (quickfix: next item)",
+        },
+        ["[q"] = {
+          function() require("review_files_nav").step "prev" end,
+          desc = "Previous changed file (quickfix: previous item)",
+        },
+        -- File-name counterpart of <Leader>fW: lists symlinked files and descends
+        -- into symlinked directories (the ~/notes docs and `github/` linked into
+        -- a worktree), including hidden and git-ignored ones.
+        ["<Leader>fF"] = {
+          function() require("snacks").picker.files { hidden = true, ignored = true, follow = true } end,
+          desc = "Find files (hidden/ignored, follow symlinks)",
+        },
 
         -- <Leader>W: overlay a big number on every split and jump to the one you
         -- press. Uses nvim-window-picker (already a neo-tree dep). filter_func
@@ -765,7 +784,7 @@ return {
           desc = "Edit commit message (scratch)",
         },
         ["<leader>fj"] = { function() require("telescope").extensions.projects.projects {} end, desc = "Find projects" },
-        ["<leader>f<CR>"] = { "<cmd>Telescope resume<cr>", desc = "Resume previous search" },
+        ["<Leader>f<CR>"] = { function() require("snacks").picker.resume() end, desc = "Resume previous search" },
         -- Filtered document-symbol pickers. Capitalized to avoid shadowing
         -- AstroNvim's default `<Leader>lf` (vim.lsp.buf.format) and
         -- `<Leader>lc` is intentionally left free. Use `<Leader>ls` for the

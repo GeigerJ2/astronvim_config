@@ -228,7 +228,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<Leader>fu` — undo history picker (telescope-undo) *(overrides snacks undo)*
 - `<Leader>fe` — file browser (current file's dir, recursive)
 - `<Leader>fE` — file browser (cwd)
-- `<Leader>f<CR>` — resume last Telescope search
+- `<Leader>f<CR>`: resume the last Snacks search; `:Telescope resume` resumes Telescope searches.
 - `<Leader>fj` — find projects (telescope) *(`<Leader>fp` was reused for
   copy-relative-path; AstroNvim's snacks "find projects" effectively lives at `<Leader>fj`)*
 - `<Leader>lF` — LSP doc symbols, functions/methods only

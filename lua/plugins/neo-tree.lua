@@ -96,77 +96,11 @@ return {
     -- rather than only files reported by `git status` (which misses everything in
     -- 1 once it's been committed).
 
-    -- Resolve the auto-detected base branch (origin/main -> origin/master ->
-    -- main -> master) once per call. Returns the ref name or nil.
-    local function detect_base()
-      for _, ref in ipairs { "origin/main", "origin/master", "main", "master" } do
-        vim.fn.system { "git", "rev-parse", "--verify", "--quiet", ref }
-        if vim.v.shell_error == 0 then return ref end
-      end
-      return nil
-    end
-
-    -- Order paths the way neo-tree renders the tree top-to-bottom: at each level
-    -- subdirectories come before sibling files, then case-insensitive name. This
-    -- makes ]g / [g walk the visible tree in order, instead of raw ASCII order
-    -- (which puts uppercase root files like README.md above lowercase dirs).
-    local function tree_order(a, b)
-      local pa = vim.split(a, "/", { plain = true })
-      local pb = vim.split(b, "/", { plain = true })
-      for i = 1, math.min(#pa, #pb) do
-        if pa[i] ~= pb[i] then
-          local a_is_dir, b_is_dir = i < #pa, i < #pb -- more components after => a dir here
-          if a_is_dir ~= b_is_dir then return a_is_dir end -- dirs before files
-          return pa[i]:lower() < pb[i]:lower()
-        end
-      end
-      return #pa < #pb
-    end
-
-    -- Returns absolute paths of all PR files in tree order, deduped. nil + reason
-    -- on failure (not in a repo, no base, etc.).
-    local function get_pr_files()
-      local root = vim.fn.systemlist({ "git", "rev-parse", "--show-toplevel" })[1]
-      if vim.v.shell_error ~= 0 or not root or root == "" then
-        return nil, "not a git repository"
-      end
-      local base = detect_base()
-      if not base then return nil, "no base branch (origin/main, main, ...) found" end
-      local merge_base = vim.fn.systemlist({ "git", "merge-base", "HEAD", base })[1]
-      if vim.v.shell_error ~= 0 or not merge_base or merge_base == "" then
-        return nil, "no merge-base with " .. base
-      end
-
-      local committed = vim.fn.systemlist { "git", "diff", "--name-only", merge_base .. "..HEAD" }
-      local porcelain = vim.fn.systemlist { "git", "status", "--porcelain" }
-
-      local seen, files = {}, {}
-      local function add(rel)
-        if rel and rel ~= "" and not seen[rel] then
-          seen[rel] = true
-          table.insert(files, root .. "/" .. rel)
-        end
-      end
-      for _, rel in ipairs(committed) do add(rel) end
-      for _, line in ipairs(porcelain) do
-        -- Porcelain lines are "XY <path>" or "XY <old> -> <new>" for renames.
-        local renamed = line:match "^.. .+ %-> (.+)$"
-        add(renamed or line:match "^.. (.+)$")
-      end
-      table.sort(files, tree_order)
-      return files
-    end
-
-    -- (root, merge_base) for the current repo/PR branch, or nil on any failure.
-    local function pr_context()
-      local root = vim.fn.systemlist({ "git", "rev-parse", "--show-toplevel" })[1]
-      if vim.v.shell_error ~= 0 or root == nil or root == "" then return nil end
-      local base = detect_base()
-      if base == nil then return nil end
-      local mb = vim.fn.systemlist({ "git", "merge-base", "HEAD", base })[1]
-      if vim.v.shell_error ~= 0 or mb == nil or mb == "" then return nil end
-      return root, mb
-    end
+    -- The changed-file list, tree ordering and merge-base lookup live in
+    -- lua/pr_files.lua, shared with ]q / [q in a normal buffer (polish.lua).
+    local pr_files = require "pr_files"
+    local get_pr_files = pr_files.list
+    local pr_context = pr_files.context
 
     -- Point gitsigns' diff base at the PR merge-base, globally so files opened
     -- later inherit it too. Guarded so holding ]g doesn't re-diff on every press.
@@ -194,38 +128,8 @@ return {
         local node = state.tree and state.tree:get_node()
         local cur = node and node.path or nil
         local target
-        local idx
-        if cur then
-          for i, f in ipairs(files) do
-            if f == cur then
-              idx = i
-              break
-            end
-          end
-        end
-        if idx ~= nil then
-          -- On a PR file: step to the next / previous one, wrapping at the ends.
-          target = direction == "next" and (files[idx + 1] or files[1]) or (files[idx - 1] or files[#files])
-        elseif cur ~= nil then
-          -- On a dir or an unchanged file: jump to the nearest PR file in the
-          -- travel direction by tree order (tree_order(a, b) = a sorts before b).
-          if direction == "next" then
-            for _, f in ipairs(files) do
-              if tree_order(cur, f) then
-                target = f
-                break
-              end
-            end
-            target = target or files[1]
-          else
-            for i = #files, 1, -1 do
-              if tree_order(files[i], cur) then
-                target = files[i]
-                break
-              end
-            end
-            target = target or files[#files]
-          end
+        if cur ~= nil then
+          target = pr_files.step(files, cur, direction)
         else
           target = direction == "next" and files[1] or files[#files]
         end
