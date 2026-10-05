@@ -82,6 +82,24 @@ local function octo_goto_thread(dir)
   end
 end
 
+-- ]g / [g: next/prev change, cascading across files exactly like ]q/[q.
+--
+-- Plain ]c stops dead at the last change in a file, which mid-review means
+-- reaching for ]q on every file boundary. When the cursor doesn't move, fall
+-- through to the ]q/[q mapping itself (`:normal ]q` replays the buffer-local
+-- map, so any override still wins). Mirrors diffview's change_or_entry.
+local function octo_change_or_file(motion, queue_key)
+  return function()
+    local before = vim.api.nvim_win_get_cursor(0)
+    pcall(vim.cmd, "normal! " .. motion)
+    if vim.api.nvim_win_get_cursor(0)[1] ~= before[1] then
+      vim.cmd "normal! zz"
+    elseif next(vim.fn.maparg(queue_key, "n", false, true)) ~= nil then
+      pcall(vim.cmd, "normal " .. queue_key)
+    end
+  end
+end
+
 ---@type LazySpec
 return {
   "pwntester/octo.nvim",
@@ -137,6 +155,8 @@ return {
           if not vim.api.nvim_buf_is_valid(args.buf) then return end
           vim.keymap.set("n", "]t", function() octo_goto_thread(1) end, { buffer = args.buf, desc = "Octo: next review thread (any file)" })
           vim.keymap.set("n", "[t", function() octo_goto_thread(-1) end, { buffer = args.buf, desc = "Octo: prev review thread (any file)" })
+          vim.keymap.set("n", "]g", octo_change_or_file("]c", "]q"), { buffer = args.buf, desc = "Octo: next change, then next file" })
+          vim.keymap.set("n", "[g", octo_change_or_file("[c", "[q"), { buffer = args.buf, desc = "Octo: prev change, then prev file" })
         end)
       end,
     })

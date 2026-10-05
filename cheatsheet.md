@@ -402,6 +402,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `]c` / `[c` — next / prev review comment
 - `]t` / `[t` — next / prev review thread
 - `]q` / `[q` — next / prev file in review
+- `]g` / `[g` — next / prev change, cascading across files like `]q` / `[q` (shadows gitsigns hunks in review diffs)
 - File panel: `j`/`k` navigate, `<CR>` select
 - First display of a review/`:ReviewCommits` diff jumps to the first change
 - *This config patches `FileEntry.show_diff`* so diff mode reliably engages
