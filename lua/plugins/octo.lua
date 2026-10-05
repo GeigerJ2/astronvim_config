@@ -141,6 +141,29 @@ return {
       end,
     })
 
+    -- Land on the first change when a review file is first displayed, instead
+    -- of the top of the file. The visited flag keeps later visits (and manual
+    -- positions) intact; the jump is scheduled so it runs after octo settles
+    -- the layout. Mirrors the diffview `diff_buf_win_enter` hook.
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      group = vim.api.nvim_create_augroup("octo_first_change", { clear = true }),
+      desc = "Jump to first change on first display of an octo review diff",
+      callback = function(args)
+        if vim.b[args.buf].octo_diff_props == nil then return end
+        if vim.b[args.buf].octo_first_change_done then return end
+        vim.b[args.buf].octo_first_change_done = true
+        local win = vim.api.nvim_get_current_win()
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(args.buf) or not vim.api.nvim_win_is_valid(win) then return end
+          vim.api.nvim_win_call(win, function()
+            vim.cmd "normal! gg"
+            if vim.fn.diff_hlID(1, 1) == 0 then vim.cmd "silent! normal! ]c" end
+            vim.cmd "normal! zz"
+          end)
+        end)
+      end,
+    })
+
     -- Keep :Octo review readable. octo mirrors GitHub with green/red diff
     -- backgrounds of its own: changed *text* via OctoReviewDiffAdd/DeleteText
     -- (white on dark green/red), and changed *lines* link DiffChange ->

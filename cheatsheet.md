@@ -403,6 +403,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `]t` / `[t` — next / prev review thread
 - `]q` / `[q` — next / prev file in review
 - File panel: `j`/`k` navigate, `<CR>` select
+- First display of a review/`:ReviewCommits` diff jumps to the first change
 - *This config patches `FileEntry.show_diff`* so diff mode reliably engages
   on both panes; right pane is also writable during review.
 

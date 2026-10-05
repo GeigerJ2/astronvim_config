@@ -9,6 +9,24 @@ return {
   opts = function(_, opts)
     local actions = require "diffview.actions"
 
+    -- Land on the first change when a diff buffer is first displayed, so file
+    -- selection lands on the hunk instead of the top of the file. The visited
+    -- flag keeps later visits (and manual positions) intact; the jump is
+    -- scheduled so it runs after diffview settles the layout. Mirrors the
+    -- octo `octo_first_change` autocmd.
+    local function goto_first_change(bufnr, winid)
+      if vim.b[bufnr].diffview_first_change_done then return end
+      vim.b[bufnr].diffview_first_change_done = true
+      vim.schedule(function()
+        if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
+        vim.api.nvim_win_call(winid, function()
+          vim.cmd "normal! gg"
+          if vim.fn.diff_hlID(1, 1) == 0 then vim.cmd "silent! normal! ]c" end
+          vim.cmd "normal! zz"
+        end)
+      end)
+    end
+
     opts.enhanced_diff_hunks = true
 
     -- Per diff-window look, mirroring the octo.lua show_diff tweaks. The 50/50
@@ -16,12 +34,13 @@ return {
     -- equalize_diff_panes autocmd in astrocore.lua (it runs <C-w>= on the review
     -- tab after the async layout / terminal settle).
     opts.hooks = vim.tbl_extend("force", opts.hooks or {}, {
-      diff_buf_win_enter = function(_, winid)
+      diff_buf_win_enter = function(bufnr, winid)
         vim.wo[winid].wrap = true
         vim.wo[winid].linebreak = true
         vim.wo[winid].breakindent = true
         vim.wo[winid].smoothscroll = true
         vim.wo[winid].foldlevel = 99 -- start fully unfolded (diff folds context at 0)
+        goto_first_change(bufnr, winid)
       end,
     })
 
