@@ -525,7 +525,7 @@ return {
 
         -- which-key group label for the claudecode.nvim maps (defined in
         -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
-        ["<Leader>a"] = { desc = "󰚩 AI/Claude Code" },
+        ["<Leader>a"] = { desc = "󰚩 AI" },
 
         -- Toggle the CURRENT buffer's gitsigns base. Default is the PR merge-base
         -- (whole-PR gutter + working ]g/[g hunk-nav, but blame reads "Not Committed
@@ -651,6 +651,14 @@ return {
 
         -- render-markdown.nvim: toggle the rich rendering for the current buffer only
         ["<Leader>um"] = { "<Cmd>RenderMarkdown buf_toggle<CR>", desc = "Toggle markdown rendering (buffer)" },
+
+        -- flip between the Astro dark/light themes (complements <Leader>ft picker)
+        ["<Leader>uT"] = {
+          function()
+            vim.cmd.colorscheme(vim.g.colors_name == "astrodark" and "astrolight" or "astrodark")
+          end,
+          desc = "Toggle astrodark/astrolight",
+        },
 
         -- delete the current file from disk and wipe its buffer, landing on the
         -- alternate buffer (or a fresh empty one) rather than [No Name].

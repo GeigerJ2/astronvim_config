@@ -25,8 +25,8 @@ return {
   -- it and forwards to the real `coderabbit`. Drop this once the plugin is fixed.
   opts = { cli = { binary = "coderabbit-nvim" } },
   keys = {
-    -- Under the <leader>a AI group (with claudecode + pi). claude owns bare
-    -- <leader>ac/<leader>ar, so CodeRabbit gets the <leader>aR subgroup (R = Rabbit).
+    -- Under the <leader>a AI group (with claudecode + pi), in the <leader>aR
+    -- subgroup (R = Rabbit); claude lives under <leader>ac.
     { "<Leader>aR", desc = "󰋚 CodeRabbit" },
     { "<Leader>aRr", "<Cmd>CodeRabbitReview all<CR>", desc = "Review all changes" },
     { "<Leader>aRu", "<Cmd>CodeRabbitReview uncommitted<CR>", desc = "Review uncommitted" },
