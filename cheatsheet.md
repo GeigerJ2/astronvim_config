@@ -276,6 +276,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 
 ### 3.1 Buffer-local LSP (AstroNvim defaults)
 - `K` — hover doc; `gd` — definition; `gD` — declaration
+- `gpd` *(custom)* — definition in a floating preview (layout-safe for reviews); `gP` — close previews
 - `gr` — references; `gI` — implementation; `gy` — type definition
 - `<Leader>la` — code action; `<Leader>lr` — rename
 - `<Leader>lh` — toggle inlay hints
@@ -284,6 +285,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<Leader>ls` — document symbols (snacks); `<Leader>lS` — symbols outline (aerial)
 - `<Leader>lF` *(custom)* — search functions/methods (filtered telescope picker)
 - `<Leader>lC` *(custom)* — search classes/structs (filtered telescope picker)
+- `<Leader>lW` *(custom)* — search symbols across the project (LSP workspace)
 - `<Leader>ld` — line diagnostics; `[d` / `]d` — prev / next
 - `<Leader>lD` — workspace diagnostics (snacks picker)
 - `<Leader>li` — `:checkhealth vim.lsp`; `<Leader>lI` — `:NullLsInfo`

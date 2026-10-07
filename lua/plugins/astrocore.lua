@@ -813,22 +813,12 @@ return {
           end,
           desc = "Search classes",
         },
-        -- ["<leader>lF"] = {
-        --   function()
-        --     require("telescope.builtin").lsp_workspace_symbols {
-        --       symbols = { "function", "method" },
-        --     }
-        --   end,
-        --   desc = "Search functions (workspace)",
-        -- },
-        -- ["<leader>lC"] = {
-        --   function()
-        --     require("telescope.builtin").lsp_workspace_symbols {
-        --       symbols = { "class", "struct" },
-        --     }
-        --   end,
-        --   desc = "Search classes (workspace)",
-        -- },
+        -- Workspace-wide symbols (functions, classes, methods, …). `lF`/`lC`
+        -- cover the current buffer; this one asks the LSP for the project.
+        ["<leader>lW"] = {
+          function() require("telescope.builtin").lsp_workspace_symbols() end,
+          desc = "Search symbols (workspace)",
+        },
         -- Open the full PR (or one file of it) in a Diffview tab.
         --   `:DiffviewPR`              → all files
         --   `:DiffviewPR <path>`       → just that file
