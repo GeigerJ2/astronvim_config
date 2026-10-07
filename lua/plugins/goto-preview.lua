@@ -12,7 +12,24 @@ return {
       -- keep the cursor where the review is; <CR> inside the preview jumps there
       focus_on_open = false,
       dismiss_on_move = false,
-      border = { "rounded", "rounded", "rounded", "rounded" },
+      -- 8-cell table: the plugin forwards it untouched to nvim_open_win,
+      -- which rejects the "rounded" string form here.
+      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
+      -- the plugin anchors a 120x15 float at the symbol, which jumps around
+      -- the screen; recenter on the editor at 70% size instead. <C-w>w focuses
+      -- the float (scroll with j/k, <C-d>/<C-u>, <C-f>/<C-b>, <C-w>p jumps
+      -- back), gP closes it.
+      post_open_hook = function(_, win)
+        local width = math.floor(vim.o.columns * 0.7)
+        local height = math.floor((vim.o.lines - vim.o.cmdheight) * 0.7)
+        vim.api.nvim_win_set_config(win, {
+          relative = "editor",
+          width = width,
+          height = height,
+          row = math.max(0, math.floor((vim.o.lines - vim.o.cmdheight - height) / 2)),
+          col = math.max(0, math.floor((vim.o.columns - width) / 2)),
+        })
+      end,
     },
     keys = {
       {

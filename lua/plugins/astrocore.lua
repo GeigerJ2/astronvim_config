@@ -643,6 +643,37 @@ return {
           desc = "Pick window (jump by number)",
         },
 
+        -- Restore the default 3-pane layout: neo-tree left, aerial right,
+        -- main buffer middle, at 15/70/15 widths. Collapses extra splits first.
+        -- Sizing is deferred: the sidebars (re)open asynchronously, so a pass
+        -- right after the open commands misses windows that are not there yet.
+        ["<Leader>ol"] = {
+          function()
+            local function size_sidebars()
+              local side = math.max(10, math.floor(vim.o.columns * 0.15))
+              local main, seen_aerial = nil, false
+              for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+                local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
+                if ft == "neo-tree" or ft == "aerial" then
+                  vim.api.nvim_win_set_width(win, side)
+                  seen_aerial = seen_aerial or ft == "aerial"
+                else
+                  main = win
+                end
+              end
+              if main ~= nil and vim.api.nvim_win_is_valid(main) then vim.api.nvim_set_current_win(main) end
+              return seen_aerial
+            end
+            pcall(vim.cmd, "only")
+            vim.cmd "Neotree action=show source=filesystem position=left"
+            vim.cmd "AerialOpen right"
+            vim.schedule(function()
+              if not size_sidebars() then vim.defer_fn(size_sidebars, 150) end
+            end)
+          end,
+          desc = "Restore default layout (15/70/15)",
+        },
+
         -- copy file path / name (overrides snacks "Find projects" on <Leader>fp)
         ["<Leader>fp"] = { function() copy_path "relative" end, desc = "Copy relative file path" },
         ["<Leader>fP"] = { function() copy_path "absolute" end, desc = "Copy absolute file path" },

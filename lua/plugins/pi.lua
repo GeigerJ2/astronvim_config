@@ -30,7 +30,7 @@ return {
         -- makes it a FULL-WIDTH bottom split under neo-tree/aerial, so tmux
         -- line-selection over the pi output does not cut across the sidebars.
         -- toggle reuses the same pi process, so the session persists across hides.
-        require("snacks").terminal.toggle(vim.fn.expand "~/.npm-global/bin/pi", {
+        require("snacks").terminal.toggle(vim.fn.expand "~/.pi/agent/bin/pi", {
           win = { position = "bottom", height = 0.45, relative = "editor" },
         })
       end,
@@ -41,7 +41,7 @@ return {
       function()
         -- Same split as <leader>apt, but `pi --resume` so pi opens its session
         -- picker to attach a past session instead of starting fresh.
-        require("snacks").terminal.toggle({ vim.fn.expand "~/.npm-global/bin/pi", "--resume" }, {
+        require("snacks").terminal.toggle({ vim.fn.expand "~/.pi/agent/bin/pi", "--resume" }, {
           win = { position = "bottom", height = 0.45, relative = "editor" },
         })
       end,
@@ -49,9 +49,9 @@ return {
     },
   },
   opts = {
-    -- Absolute path to the npm-global install, so it resolves regardless of how
+    -- Absolute path to the managed install, so it resolves regardless of how
     -- nvim inherited PATH.
-    binary = vim.fn.expand "~/.npm-global/bin/pi",
+    binary = vim.fn.expand "~/.pi/agent/bin/pi",
     provider = "openai",
     model = "gpt-6.1-sol",
     thinking = "medium",

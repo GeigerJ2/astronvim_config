@@ -183,6 +183,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<C-w>x` — swap with next window
 - `<C-w>r` / `<C-w>R` — rotate down/right / up/left
 - `<C-w>=` — equalize sizes
+- `<Leader>ol` *(custom)* — restore neo-tree / buffer / aerial at 15/70/15
 - `<C-w>_` / `<C-w>|` — max height / max width
 - `<C-w>{n}+` / `<C-w>{n}-` — resize height; `<C-w>{n}>` / `<` width
 - `<C-w>T` — move current window to a new tab
@@ -277,6 +278,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 ### 3.1 Buffer-local LSP (AstroNvim defaults)
 - `K` — hover doc; `gd` — definition; `gD` — declaration
 - `gpd` *(custom)* — definition in a floating preview (layout-safe for reviews); `gP` — close previews
+- Preview floats open centered at 70% size; `<C-w>w` focuses one (scroll, `<C-w>p` jumps back)
 - `gr` — references; `gI` — implementation; `gy` — type definition
 - `<Leader>la` — code action; `<Leader>lr` — rename
 - `<Leader>lh` — toggle inlay hints
