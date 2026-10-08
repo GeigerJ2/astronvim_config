@@ -207,6 +207,11 @@ local function win_nav_wrap(dir)
   end
 end
 
+-- Guard for <Leader>ol below: a restore is already settling its deferred sizing
+-- passes; another press would stack window churn onto neo-tree's debounced
+-- follow handler. Dropped while in flight (the layout converges anyway).
+local ol_in_flight = false
+
 return {
   "AstroNvim/astrocore",
   ---@type AstroCoreOpts
@@ -645,31 +650,49 @@ return {
 
         -- Restore the default 3-pane layout: neo-tree left, aerial right,
         -- main buffer middle, at 15/70/15 widths. Collapses extra splits first.
-        -- Sizing is deferred: the sidebars (re)open asynchronously, so a pass
-        -- right after the open commands misses windows that are not there yet.
+        -- Sizing is deferred and retried: the sidebars (re)open asynchronously
+        -- (a source switch even replaces the neo-tree window), so a pass right
+        -- after the open commands misses windows that are not there yet.
         ["<Leader>ol"] = {
           function()
             local function size_sidebars()
               local side = math.max(10, math.floor(vim.o.columns * 0.15))
-              local main, seen_aerial = nil, false
+              local main, seen_tree, seen_aerial = nil, false, false
               for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
                 local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
                 if ft == "neo-tree" or ft == "aerial" then
                   vim.api.nvim_win_set_width(win, side)
+                  seen_tree = seen_tree or ft == "neo-tree"
                   seen_aerial = seen_aerial or ft == "aerial"
                 else
                   main = win
                 end
               end
               if main ~= nil and vim.api.nvim_win_is_valid(main) then vim.api.nvim_set_current_win(main) end
-              return seen_aerial
+              return seen_tree and seen_aerial
             end
+            local attempts = 0
+            local function pass()
+              attempts = attempts + 1
+              if size_sidebars() or attempts >= 4 then
+                ol_in_flight = false
+              else
+                vim.defer_fn(pass, 150)
+              end
+            end
+            if ol_in_flight then return end
+            ol_in_flight = true
             pcall(vim.cmd, "only")
-            vim.cmd "Neotree action=show source=filesystem position=left"
-            vim.cmd "AerialOpen right"
-            vim.schedule(function()
-              if not size_sidebars() then vim.defer_fn(size_sidebars, 150) end
+            local ok, err = pcall(function()
+              vim.cmd "Neotree action=show source=filesystem position=left"
+              vim.cmd "AerialOpen right"
             end)
+            if not ok then
+              ol_in_flight = false
+              vim.notify("Restore layout: " .. tostring(err), vim.log.levels.WARN)
+              return
+            end
+            vim.schedule(pass)
           end,
           desc = "Restore default layout (15/70/15)",
         },
@@ -849,6 +872,27 @@ return {
         ["<leader>lW"] = {
           function() require("telescope.builtin").lsp_workspace_symbols() end,
           desc = "Search symbols (workspace)",
+        },
+        -- Document symbols with ancestor breadcrumbs (`Class › method`), so
+        -- repeated names show where they live. Overrides AstroNvim's
+        -- `<Leader>ls` (aerial or plain snacks) with a custom format.
+        ["<Leader>ls"] = {
+          function()
+            local lsp_format = require("snacks.picker.format").lsp_symbol
+            require("snacks").picker.lsp_symbols {
+              format = function(item, picker)
+                local ret = lsp_format(item, picker)
+                local chain, node = {}, item.parent
+                while node ~= nil and node.name ~= nil do
+                  table.insert(chain, 1, node.name)
+                  node = node.parent
+                end
+                if #chain > 0 then ret[#ret + 1] = { "  " .. table.concat(chain, " › ") .. " ", "SnacksPickerComment" } end
+                return ret
+              end,
+            }
+          end,
+          desc = "Search symbols with parents",
         },
         -- Open the full PR (or one file of it) in a Diffview tab.
         --   `:DiffviewPR`              → all files

@@ -284,7 +284,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<Leader>lh` — toggle inlay hints
 - `<Leader>lf` — format buffer (LSP); visual selection in visual mode
 - `<Leader>lG` — toggle format on save (per-buffer / global)
-- `<Leader>ls` — document symbols (snacks); `<Leader>lS` — symbols outline (aerial)
+- `<Leader>ls` *(custom)* — document symbols with parent breadcrumbs; `<Leader>lS` — symbols outline (aerial)
 - `<Leader>lF` *(custom)* — search functions/methods (filtered telescope picker)
 - `<Leader>lC` *(custom)* — search classes/structs (filtered telescope picker)
 - `<Leader>lW` *(custom)* — search symbols across the project (LSP workspace)
