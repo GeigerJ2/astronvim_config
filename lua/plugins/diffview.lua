@@ -97,18 +97,15 @@ return {
       end
     end
 
-    -- `R` in the file-history panel (:ReviewCommits) refetches the log, which is
-    -- how a folded-in change (amend / rebase --autosquash) shows up. Diffview's
-    -- default then jumps to the first commit's first file, losing your place.
-    -- Restore it: snapshot the position by commit INDEX + file PATH (the SHAs are
-    -- rewritten, so the old entry object is gone, but the Nth commit -- same count
-    -- -- and the path survive), then re-select after the refetch. set_file(_, false)
-    -- reopens that diff and highlights the entry without leaving the panel.
-    local function refresh_keep_pos()
-      local vlib = require "diffview.lib"
-      local v = vlib.get_current_view()
-      if not (v and v.panel and v.panel.update_entries) then return end
-      local panel = v.panel
+    -- Position tracking across file-history refetches (`R`, :DiffviewRefresh).
+    -- Refetching is how a folded-in change (amend / rebase --autosquash) shows
+    -- up, but diffview wipes cur_item on update and the mid-stream render jumps
+    -- to the first commit's first file, losing your place. Snapshot the position
+    -- by commit INDEX + file PATH (the SHAs are rewritten, so the old entry
+    -- object is gone, but the Nth commit -- same count -- and the path survive),
+    -- then re-select after the refetch. set_file(_, false) reopens that diff and
+    -- highlights the entry without leaving the panel.
+    local function snapshot_fh_pos(panel)
       local cur_entry, cur_file = panel.cur_item[1], panel.cur_item[2]
       local idx
       if cur_entry then
@@ -119,24 +116,48 @@ return {
           end
         end
       end
-      local path = cur_file and cur_file.path or nil
-      panel:update_entries(function()
-        local entries = panel.entries
-        if not entries or #entries == 0 then return end
-        local entry = (idx and entries[idx]) or entries[1]
-        local file
-        if entry and entry.files then
-          if path then
-            for _, f in ipairs(entry.files) do
-              if f.path == path then
-                file = f
-                break
-              end
+      return { idx = idx, path = cur_file and cur_file.path or nil }
+    end
+
+    local function restore_fh_pos(view, panel, snap)
+      if snap.idx == nil and snap.path == nil then return end
+      local entries = panel.entries
+      if not entries or #entries == 0 then return end
+      local entry = (snap.idx and entries[snap.idx]) or entries[1]
+      local file
+      if entry and entry.files then
+        if snap.path then
+          for _, f in ipairs(entry.files) do
+            if f.path == snap.path then
+              file = f
+              break
             end
           end
-          file = file or entry.files[1]
         end
-        if file then v:set_file(file, false) end
+        file = file or entry.files[1]
+      end
+      if file then view:set_file(file, false) end
+    end
+
+    local function refresh_keep_pos()
+      local vlib = require "diffview.lib"
+      local v = vlib.get_current_view()
+      if not (v and v.panel and v.panel.update_entries) then return end
+      local panel, snap = v.panel, snapshot_fh_pos(v.panel)
+      panel:update_entries(function() restore_fh_pos(v, panel, snap) end)
+    end
+
+    -- Make every file-history refetch position-preserving, including
+    -- :DiffviewRefresh (whose listener otherwise leaves you on the topmost
+    -- commit). An empty snapshot (fresh open) restores nothing.
+    local FileHistoryPanel =
+      require("diffview.scene.views.file_history.file_history_panel").FileHistoryPanel
+    local orig_update_entries = FileHistoryPanel.update_entries
+    FileHistoryPanel.update_entries = function(self, callback)
+      local snap = snapshot_fh_pos(self)
+      return orig_update_entries(self, function(entries, status, msg)
+        if callback then callback(entries, status, msg) end
+        restore_fh_pos(self.parent, self, snap)
       end)
     end
 
@@ -151,6 +172,8 @@ return {
       -- ]C/[C: next/prev commit in a file-history / :ReviewCommits review.
       { "n", "]C", actions.select_next_commit, { desc = "Next commit" } },
       { "n", "[C", actions.select_prev_commit, { desc = "Prev commit" } },
+      -- L: commit message float, like in the file-history panel.
+      { "n", "L", actions.open_commit_log, { desc = "Show commit message" } },
     })
     opts.keymaps.view = view
 
@@ -170,10 +193,37 @@ return {
       opts.keymaps[panel] = maps
     end
 
+    -- Open the commit under the cursor as a full diff (`<sha>^!`: all files at
+    -- once, like the GitHub commit view) and land in the right pane so ]g
+    -- walks the changes immediately. `y` (built-in) copies its hash.
+    local function open_commit_full()
+      local vlib = require "diffview.lib"
+      local v = vlib.get_current_view()
+      local panel = v and v.panel
+      if not (panel and panel.get_item_at_cursor) then return end
+      local item = panel:get_item_at_cursor()
+      local hash = item and item.commit and item.commit.hash
+      if not hash or hash == "" then
+        vim.notify("No commit under cursor", vim.log.levels.WARN)
+        return
+      end
+      vim.cmd("DiffviewOpen " .. hash .. "^!")
+      vim.schedule(function()
+        local cur = vlib.get_current_view()
+        local layout = cur and cur.cur_layout
+        local main = layout and layout.get_main_win and layout:get_main_win()
+        local winid = type(main) == "number" and main or (main and main.id)
+        if type(winid) == "number" and vim.api.nvim_win_is_valid(winid) then
+          vim.api.nvim_set_current_win(winid)
+        end
+      end)
+    end
+
     -- Position-preserving refresh, only for the commit-review panel.
     local fhp = opts.keymaps.file_history_panel or {}
     vim.list_extend(fhp, {
       { "n", "R", refresh_keep_pos, { desc = "Refresh, keep position" } },
+      { "n", "gd", open_commit_full, { desc = "Open full commit diff (all files)" } },
     })
     opts.keymaps.file_history_panel = fhp
 

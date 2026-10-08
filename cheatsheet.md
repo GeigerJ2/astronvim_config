@@ -350,7 +350,9 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `:DiffviewFileHistory` — history of cwd
 - *Custom:* `:DiffviewPR`. Auto-detect PR base.
 - Inside: `<Tab>`/`<S-Tab>` next/prev file, `gf` open in tab, `<Leader>e`
-  toggle file panel, `g<C-x>` cycle layout, `[x`/`]x` next/prev conflict
+  toggle file panel, `g<C-x>` cycle layout, `[x`/`]x` next/prev conflict,
+  `L` commit message
+- File history: `y` copy commit hash, `gd` full commit diff, `R` refresh keeping position
 
 ### 4.3 Neogit
 - `:Neogit` — main UI; `:Neogit cwd=...` `:Neogit kind=split` etc.
