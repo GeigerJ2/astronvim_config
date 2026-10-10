@@ -100,6 +100,28 @@ local function octo_change_or_file(motion, queue_key)
   end
 end
 
+-- `:Octo pr edit` with no number edits the current branch's PR (like `gh`),
+-- instead of octo's "Missing arguments". Replaces octo's own `:Octo` command
+-- with a wrapper that injects the number and delegates everything else to
+-- octo's dispatcher, preserving completion, range, and OctoLastCmdOpts.
+local function wrap_octo_pr_edit()
+  pcall(vim.api.nvim_del_user_command, "Octo")
+  vim.api.nvim_create_user_command("Octo", function(cmd_opts)
+    local args = cmd_opts.fargs
+    if #args == 2 and args[1] == "pr" and args[2] == "edit" then
+      local pr_number = vim.trim(vim.fn.system("gh pr view --json number -q .number 2>/dev/null"))
+      if pr_number == "" or not tonumber(pr_number) then
+        vim.notify("No PR found for current branch", vim.log.levels.WARN)
+        return
+      end
+      table.insert(args, pr_number)
+    end
+    OctoLastCmdOpts = cmd_opts
+    require("octo.commands").octo(unpack(args))
+    OctoLastCmdOpts = nil
+  end, { complete = require("octo.completion").octo_command_complete, nargs = "*", range = true })
+end
+
 ---@type LazySpec
 return {
   "pwntester/octo.nvim",
@@ -139,6 +161,7 @@ return {
   },
   config = function(_, opts)
     require("octo").setup(opts)
+    wrap_octo_pr_edit()
 
     -- ]t / [t: next / previous review thread ACROSS files. octo's built-in
     -- next_thread/prev_thread only walk the current file, and octo maps action

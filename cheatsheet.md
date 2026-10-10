@@ -398,6 +398,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 
 ### 5.2 Current-branch shortcuts (custom commands)
 - `<LocalLeader>oe` — `:OctoPrEditCurrent` — edit PR for current branch
+- Bare `:Octo pr edit` also defaults to the current branch PR *(custom wrapper)*
 - `<LocalLeader>oc` — `:OctoPrChecksCurrent` — show PR checks for current branch
 - `<LocalLeader>of` — jump from octo:// buffer to local file in **new tab**
 - `<LocalLeader>oF` — same but **vsplit**

@@ -773,7 +773,8 @@ return {
         -- PR-changed files as a tree (single on-disk view); overrides the
         -- default snacks git-status picker on this key.
         ["<Leader>gt"] = { "<Cmd>PRTree<CR>", desc = "PR-changed files as a tree (on disk)" },
-        ["<Leader>gc"] = { "<Cmd>ReviewCommits<CR>", desc = "Review commits one-by-one (PR or branch)" },
+        ["<Leader>gc"] = { "<Cmd>ReviewCommits<CR>", desc = "Review commits one-by-one, newest first" },
+        ["<Leader>gC"] = { "<Cmd>ReviewCommits!<CR>", desc = "Review commits one-by-one, oldest first" },
         ["<Leader>gi"] = { "<Cmd>PrInfo<CR>", desc = "PR title + body (popup)" },
 
         -- peek fold content in scrollable floating window
@@ -907,8 +908,8 @@ return {
         -- branch adds. Opens a Diffview file-history panel of just those commits
         -- (from where the branch diverged from its base); select each to see its
         -- own diff (commit vs its parent), ]q/[q cycle files within a commit, g?
-        -- shows the keymap. --reverse lists oldest-first so you review the branch
-        -- in the order it was built.
+        -- shows the keymap. Newest first, like git log; bang lists oldest-first
+        -- so you review the branch in the order it was built.
         --
         -- The base is the PR base when the branch has a PR, else the merge-base
         -- with the default branch (see resolve_review_base), so this works on any
@@ -916,6 +917,7 @@ return {
         --   :ReviewCommits            → PR base, else default-branch fork point
         --   :ReviewCommits develop    → commits since the fork from develop
         --   :ReviewCommits feature-a  → commits since the fork from a stacked parent
+        --   :ReviewCommits!           → oldest first instead of newest first
         vim.api.nvim_create_user_command("ReviewCommits", function(opts)
           local merge_base = resolve_review_base(opts.args)
           if merge_base == "" then
@@ -924,9 +926,11 @@ return {
             return
           end
           vim.g.review_pr_base = merge_base -- read by review_pr_gutter.lua
-          vim.cmd("DiffviewFileHistory --range=" .. merge_base .. "..HEAD --no-merges --reverse")
+          local rev = opts.bang and " --reverse" or ""
+          vim.cmd("DiffviewFileHistory --range=" .. merge_base .. "..HEAD --no-merges" .. rev)
         end, {
           nargs = "?",
+          bang = true,
           complete = function(arglead)
             local branches = vim.fn.systemlist "git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2>/dev/null"
             return vim.tbl_filter(function(b)
