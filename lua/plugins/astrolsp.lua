@@ -290,7 +290,39 @@ return {
           cond = "textDocument/references",
         },
         ["<Leader>lq"] = {
-          function() require("snacks").picker.diagnostics_buffer() end,
+          function()
+            require("snacks").picker.diagnostics_buffer {
+              win = {
+                list = {
+                  keys = {
+                    -- `y` yanks selected entries (or the current one) as
+                    -- `file:line:col: message` lines to the clipboard.
+                    y = function(picker)
+                      local items = picker:selected()
+                      if #items == 0 then items = { picker:current() } end
+                      local lines = {}
+                      for _, item in ipairs(items) do
+                        if item ~= nil then
+                          local pos = item.pos or { 1, 0 }
+                          lines[#lines + 1] = string.format(
+                            "%s:%d:%d: %s",
+                            item.file or "?",
+                            pos[1],
+                            (pos[2] or 0) + 1,
+                            item.comment or item.text or ""
+                          )
+                        end
+                      end
+                      if #lines > 0 then
+                        vim.fn.setreg("+", table.concat(lines, "\n"))
+                        vim.notify("Yanked " .. #lines .. " diagnostic(s)")
+                      end
+                    end,
+                  },
+                },
+              },
+            }
+          end,
           desc = "Buffer diagnostics (picker)",
         },
         ["<Leader>lps"] = {
