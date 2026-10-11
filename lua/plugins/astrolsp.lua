@@ -282,9 +282,16 @@ return {
           function() require("telescope.builtin").diagnostics { bufnr = 0 } end,
           desc = "Search buffer diagnostics",
         },
+        -- References in a snacks picker (filter left, preview right) instead of
+        -- AstroNvim's quickfix list. Single match jumps straight in.
+        ["<Leader>lR"] = {
+          function() require("snacks").picker.lsp_references() end,
+          desc = "Search references (picker)",
+          cond = "textDocument/references",
+        },
         ["<Leader>lq"] = {
-          function() vim.diagnostic.setloclist() end,
-          desc = "Buffer diagnostics to loclist",
+          function() require("snacks").picker.diagnostics_buffer() end,
+          desc = "Buffer diagnostics (picker)",
         },
         ["<Leader>lps"] = {
           function()

@@ -671,19 +671,46 @@ return {
               if main ~= nil and vim.api.nvim_win_is_valid(main) then vim.api.nvim_set_current_win(main) end
               return seen_tree and seen_aerial
             end
+            -- Every pass is pcall-guarded: windows open and close around us
+            -- while the sidebars settle, and a throw must never wedge the
+            -- guard flag (which would silently drop all later presses).
             local attempts = 0
             local function pass()
               attempts = attempts + 1
-              if size_sidebars() or attempts >= 4 then
+              local ok, both = pcall(size_sidebars)
+              if (ok and both) or attempts >= 12 then
                 ol_in_flight = false
+                if not ok then
+                  vim.notify("Restore layout: " .. tostring(both), vim.log.levels.WARN)
+                  return
+                end
+                -- Report the converged widths when a sidebar missed its
+                -- target: silent success, precise signal otherwise.
+                local side = math.max(10, math.floor(vim.o.columns * 0.15))
+                local bad = {}
+                for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+                  local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
+                  if ft == "neo-tree" or ft == "aerial" then
+                    local w = vim.api.nvim_win_get_width(win)
+                    if math.abs(w - side) > math.max(4, math.floor(side * 0.2)) then
+                      bad[#bad + 1] = ft .. " " .. w .. "/" .. side
+                    end
+                  end
+                end
+                if #bad > 0 then
+                  vim.notify("Restore layout off: " .. table.concat(bad, ", "), vim.log.levels.WARN)
+                end
               else
-                vim.defer_fn(pass, 150)
+                vim.defer_fn(pass, 250)
               end
             end
             if ol_in_flight then return end
             ol_in_flight = true
             pcall(vim.cmd, "only")
             local ok, err = pcall(function()
+              -- Close neo-tree first: reopening fresh lays out correctly,
+              -- while resizing a stale tree window can leave it squeezed shut.
+              pcall(vim.cmd, "Neotree close")
               vim.cmd "Neotree action=show source=filesystem position=left"
               vim.cmd "AerialOpen right"
             end)
@@ -692,7 +719,9 @@ return {
               vim.notify("Restore layout: " .. tostring(err), vim.log.levels.WARN)
               return
             end
-            vim.schedule(pass)
+            -- First pass runs now (catches already-open sidebars instantly);
+            -- misses schedule retries behind the async opens.
+            pass()
           end,
           desc = "Restore default layout (15/70/15)",
         },
@@ -874,6 +903,7 @@ return {
           function() require("telescope.builtin").lsp_workspace_symbols() end,
           desc = "Search symbols (workspace)",
         },
+
         -- Document symbols with ancestor breadcrumbs (`Class › method`), so
         -- repeated names show where they live. Overrides AstroNvim's
         -- `<Leader>ls` (aerial or plain snacks) with a custom format.

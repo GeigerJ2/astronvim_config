@@ -280,6 +280,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `gpd` *(custom)* — definition in a floating preview (layout-safe for reviews); `gP` — close previews
 - Preview floats open centered at 70% size; `<C-w>w` focuses one (scroll, `<C-w>p` jumps back)
 - `gr` — references; `gI` — implementation; `gy` — type definition
+- `<Leader>lR` *(custom)* — references in snacks picker (filter left, preview right)
 - `<Leader>la` — code action; `<Leader>lr` — rename
 - `<Leader>lh` — toggle inlay hints
 - `<Leader>lf` — format buffer (LSP); visual selection in visual mode
@@ -297,7 +298,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<Leader>lpl` — lenient mode (pyright)
 - `<Leader>lpr` — toggle pylsp (rope refactoring)
 - `<Leader>lb` — buffer-only diagnostics picker
-- `<Leader>lq` — buffer diagnostics → loclist
+- `<Leader>lq` *(custom)* — buffer diagnostics in snacks picker
 - `<Leader>uY` — toggle LSP semantic highlighting (buffer)
 
 ### 3.3 Inlay hint materialization (AbysmalBiscuit/insert-inlay-hints)
