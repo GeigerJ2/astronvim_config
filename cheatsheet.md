@@ -298,7 +298,7 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<Leader>lpl` — lenient mode (pyright)
 - `<Leader>lpr` — toggle pylsp (rope refactoring)
 - `<Leader>lb` — buffer-only diagnostics picker
-- `<Leader>lq` *(custom)* — buffer diagnostics in snacks picker (`y` yanks entries)
+- `<Leader>lq` *(custom)* — buffer diagnostics in snacks picker (`y` yanks entries, `Y` yanks all)
 - `<Leader>uY` — toggle LSP semantic highlighting (buffer)
 
 ### 3.3 Inlay hint materialization (AbysmalBiscuit/insert-inlay-hints)

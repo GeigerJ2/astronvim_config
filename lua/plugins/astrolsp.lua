@@ -52,6 +52,22 @@ local function detect_python_version(python_path)
   end
 end
 
+-- Format diagnostic items as `file:line:col: message` lines on the clipboard.
+local function yank_diag_items(items)
+  local lines = {}
+  for _, item in ipairs(items) do
+    if item ~= nil then
+      local pos = item.pos or { 1, 0 }
+      lines[#lines + 1] =
+        string.format("%s:%d:%d: %s", item.file or "?", pos[1], (pos[2] or 0) + 1, item.comment or item.text or "")
+    end
+  end
+  if #lines > 0 then
+    vim.fn.setreg("+", table.concat(lines, "\n"))
+    vim.notify("Yanked " .. #lines .. " diagnostic(s)")
+  end
+end
+
 ---@type LazySpec
 return {
   "AstroNvim/astrolsp",
@@ -295,29 +311,14 @@ return {
               win = {
                 list = {
                   keys = {
-                    -- `y` yanks selected entries (or the current one) as
-                    -- `file:line:col: message` lines to the clipboard.
+                    -- `y` yanks selected entries (or the current one);
+                    -- `Y` yanks everything the finder holds.
                     y = function(picker)
                       local items = picker:selected()
                       if #items == 0 then items = { picker:current() } end
-                      local lines = {}
-                      for _, item in ipairs(items) do
-                        if item ~= nil then
-                          local pos = item.pos or { 1, 0 }
-                          lines[#lines + 1] = string.format(
-                            "%s:%d:%d: %s",
-                            item.file or "?",
-                            pos[1],
-                            (pos[2] or 0) + 1,
-                            item.comment or item.text or ""
-                          )
-                        end
-                      end
-                      if #lines > 0 then
-                        vim.fn.setreg("+", table.concat(lines, "\n"))
-                        vim.notify("Yanked " .. #lines .. " diagnostic(s)")
-                      end
+                      yank_diag_items(items)
                     end,
+                    Y = function(picker) yank_diag_items(picker.finder.items) end,
                   },
                 },
               },
