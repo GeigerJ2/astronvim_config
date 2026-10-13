@@ -219,11 +219,28 @@ return {
       end)
     end
 
+    -- D: the whole commit as ONE scrollable delta pager (commit message, stat and
+    -- every file's diff), like `git show | delta`, instead of one file at a time.
+    -- Works on a commit row or any of its file rows. `]q` / `[q` jump between
+    -- files inside the pager, `q` closes it.
+    local function open_commit_pager()
+      local v = require("diffview.lib").get_current_view()
+      local panel = v and v.panel
+      local item = panel and panel.get_item_at_cursor and panel:get_item_at_cursor()
+      local hash = item and item.commit and item.commit.hash
+      if not hash or hash == "" then
+        vim.notify("No commit under cursor", vim.log.levels.WARN)
+        return
+      end
+      require("delta_pager").open { "git", "-C", v.adapter.ctx.toplevel, "show", "--stat", "--patch", hash }
+    end
+
     -- Position-preserving refresh, only for the commit-review panel.
     local fhp = opts.keymaps.file_history_panel or {}
     vim.list_extend(fhp, {
       { "n", "R", refresh_keep_pos, { desc = "Refresh, keep position" } },
       { "n", "gd", open_commit_full, { desc = "Open full commit diff (all files)" } },
+      { "n", "D", open_commit_pager, { desc = "Whole commit in one delta pager" } },
     })
     opts.keymaps.file_history_panel = fhp
 

@@ -541,16 +541,7 @@ vim.api.nvim_create_user_command("PatchView", function(opts)
     vim.notify("PatchView: cannot read " .. file, vim.log.levels.ERROR)
     return
   end
-  vim.cmd "tabnew"
-  vim.fn.termopen { "sh", "-c", 'delta --paging=never < "$1"', "sh", file }
-  vim.bo.buflisted = false
-  vim.cmd "stopinsert"
-  vim.keymap.set(
-    "n",
-    "q",
-    "<Cmd>tabclose<CR>",
-    { buffer = true, silent = true, nowait = true, desc = "Close patch view" }
-  )
+  require("delta_pager").open { "cat", file }
 end, { nargs = "?", complete = "file", desc = "Rich (delta) view of a patch file or the current buffer" })
 
 vim.api.nvim_create_autocmd("FileType", {
