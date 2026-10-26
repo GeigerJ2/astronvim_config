@@ -249,6 +249,18 @@ return {
     })
     opts.keymaps.file_history_panel = fhp
 
+    -- `Esc` closes the `L` commit-log float, like `:q`. The panel is a
+    -- `buftype=nowrite` float named `diffview://<dir>/log/<tab>/commit_log`
+    -- with `filetype=git`, so match the buffer name, not the filetype.
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      group = vim.api.nvim_create_augroup("diffview_log_esc", { clear = true }),
+      desc = "Esc closes the diffview commit-log float",
+      callback = function(args)
+        if vim.fn.bufname(args.buf):match("^diffview://.*/log/") == nil then return end
+        vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = args.buf, desc = "Close commit log" })
+      end,
+    })
+
     return opts
   end,
 }
