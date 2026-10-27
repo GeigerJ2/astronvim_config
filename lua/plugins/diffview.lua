@@ -3,6 +3,9 @@
 -- the same keys. gitsigns' ]g/[g don't work in diffview (it doesn't attach to
 -- diffview's blob buffers), so map ]g/[g here to Vim's native diff-change jump
 -- (]c/[c), which is the real hunk navigation inside a diff.
+-- `<Leader>rc` on a diff line: jump to the corresponding real-file line and
+-- append `  # > rev-jg: ` at end of line, ready to type. Grep with
+-- `rg 'rev-jg'`; the `> ` quote prefix matches the review-reply convention.
 ---@type LazySpec
 return {
   "sindrets/diffview.nvim",
@@ -174,6 +177,47 @@ return {
       { "n", "[C", actions.select_prev_commit, { desc = "Prev commit" } },
       -- L: commit message float, like in the file-history panel.
       { "n", "L", actions.open_commit_log, { desc = "Show commit message" } },
+      { "n", "<Leader>ga", function()
+        -- Same as `gf` (goto_file_edit) but stays in this window: resolve the
+        -- file + cursor via diffview's own helper, `:edit` in place, restore
+        -- the cursor, append the marker. `gf` jumps to the previous tab,
+        -- which strands the scheduled append in the diff buffer.
+        local ok, actions = pcall(require, 'diffview.actions')
+        local file, cursor = nil, nil
+        if ok then
+          local view = require('diffview.lib').get_current_view()
+          local entry = view and view.cur_entry
+          if entry and entry.absolute_path then
+            file = entry.absolute_path
+            local win = view.cur_layout and view.cur_layout:get_main_win()
+            if win then cursor = vim.api.nvim_win_get_cursor(win.id) end
+          end
+        end
+        if not file then
+          vim.cmd('silent! normal! gf')
+          return
+        end
+        -- Keep aerial shut in review edits; restore the outline state after.
+        local had_aerial = require('aerial').is_open()
+        vim.g.aerial_suppress_autoopen = true
+        if had_aerial then require('aerial').close() end
+        vim.cmd('edit ' .. vim.fn.fnameescape(file))
+        vim.schedule(function()
+          if cursor then pcall(vim.api.nvim_win_set_cursor, 0, cursor) end
+          vim.cmd('silent! normal! A  # > rev-jg: ')
+          vim.cmd('startinsert!')
+          -- On leaving insert mode, write and jump back to the diffview tab.
+          vim.api.nvim_create_autocmd('InsertLeave', {
+            once = true,
+            buffer = vim.api.nvim_get_current_buf(),
+            callback = function()
+              vim.cmd('silent! write')
+              vim.g.aerial_suppress_autoopen = false
+              vim.cmd('silent! tabprevious')
+            end,
+          })
+        end)
+      end, { desc = 'Rev annotate: append # > rev-jg: at real-file line' } },
     })
     opts.keymaps.view = view
 
