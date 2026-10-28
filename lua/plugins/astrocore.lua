@@ -526,8 +526,15 @@ return {
     mappings = {
       -- first key is the mode
       n = {
-        -- second key is the lefthand side of the map
-
+        -- Review annotation: append `  # > rev-jg: ` at EOL, enter insert.
+        -- Buffer-global (works in normal buffers after `gf` from diffview).
+        ["<Leader>ga"] = {
+          function()
+            vim.cmd('silent! normal! A  # > rev-jg: ')
+            vim.cmd('startinsert!')
+          end,
+          desc = 'Rev annotate: append # > rev-jg: at EOL',
+        },
         -- which-key group label for the claudecode.nvim maps (defined in
         -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
         ["<Leader>a"] = { desc = "󰚩 AI" },
@@ -588,19 +595,35 @@ return {
           desc = "Command history (run)",
         },
 
+        -- Live grep through Telescope (not snacks) so every word-search shares
+        -- the sqlite prompt history (<C-Up>/<C-Down> in the prompt) and the
+        -- cached-pickers list (<Leader>fH, 20 entries). Snacks grep has no
+        -- browsable history (resume = last picker only).
+        ["<Leader>fw"] = {
+          function() require("telescope.builtin").live_grep() end,
+          desc = "Live grep (history via fH)",
+        },
         -- Live grep with tests/ excluded (any depth), so you just type the pattern.
         -- exclude -> rg `-g '!**/tests/**'`. <Leader>fw is the unfiltered twin.
         ["<Leader>fx"] = {
-          function() require("snacks").picker.grep { exclude = { "**/tests/**" } } end,
-          desc = "Grep (exclude tests/)",
+          function() require("telescope.builtin").live_grep { glob_pattern = "!**/tests/**" } end,
+          desc = "Grep (exclude tests/, history via fH)",
         },
         -- Override AstroNvim's <Leader>fW (grep hidden+ignored) to also FOLLOW
         -- symlinks (rg -L), so grepping from a linked worktree descends into the
         -- `github/` symlink (which points at the main checkout) and finds its
         -- content. hidden+ignored already covers github/ being git-excluded.
         ["<Leader>fW"] = {
-          function() require("snacks").picker.grep { hidden = true, ignored = true, follow = true } end,
-          desc = "Find words (hidden/ignored, follow symlinks)",
+          function()
+            require("telescope.builtin").live_grep { additional_args = { "--hidden", "--no-ignore", "--follow" } }
+          end,
+          desc = "Find words (hidden/ignored, follow symlinks, history via fH)",
+        },
+        -- Browse past searches: cached Telescope pickers (20) in preserved
+        -- state. fw/fW/fx/fG all land here; <CR> re-opens the picked one.
+        ["<Leader>fH"] = {
+          function() require("telescope.builtin").pickers() end,
+          desc = "Past searches (cached pickers)",
         },
         -- ]q / [q: next / previous changed file (committed on this branch, modified
         -- or untracked: lua/pr_files.lua), the same keys octo, diffview and the PR
@@ -876,7 +899,7 @@ return {
           desc = "Edit commit message (scratch)",
         },
         ["<leader>fj"] = { function() require("telescope").extensions.projects.projects {} end, desc = "Find projects" },
-        ["<Leader>f<CR>"] = { function() require("snacks").picker.resume() end, desc = "Resume previous search" },
+        ["<Leader>f<CR>"] = { function() require("telescope.builtin").resume() end, desc = "Resume previous search" },
         -- Filtered document-symbol pickers. Capitalized to avoid shadowing
         -- AstroNvim's default `<Leader>lf` (vim.lsp.buf.format) and
         -- `<Leader>lc` is intentionally left free. Use `<Leader>ls` for the

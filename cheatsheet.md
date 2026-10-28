@@ -229,19 +229,10 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `<Leader>fu` — undo history picker (telescope-undo) *(overrides snacks undo)*
 - `<Leader>fe` — file browser (current file's dir, recursive)
 - `<Leader>fE` — file browser (cwd)
-- `<Leader>f<CR>`: resume the last Snacks search; `:Telescope resume` resumes Telescope searches.
-- `<Leader>fj` — find projects (telescope) *(`<Leader>fp` was reused for
-  copy-relative-path; AstroNvim's snacks "find projects" effectively lives at `<Leader>fj`)*
-- `<Leader>lF` — LSP doc symbols, functions/methods only
-- `<Leader>lC` — LSP doc symbols, classes/structs only
-- `<Leader>lb` — buffer diagnostics
-- *Search history is persistent (sqlite via telescope-smart-history)*
-
-### 2.2 AstroNvim defaults you almost certainly have
-- `<Leader>ff` — find files
-- `<Leader>fF` — find files (all, no gitignore)
-- `<Leader>fw` — live grep
-- `<Leader>fW` — live grep (all)
+- `<Leader>f<CR>`: resume the last search (Telescope); `<Leader>fH`: browse past searches (cached pickers); `<C-Up>`/`<C-Down>` in any grep prompt cycles sqlite-backed prompt history.
+- `<Leader>fw` — live grep (Telescope, history via `fH`)
+- `<Leader>fW` — live grep, hidden/ignored, follow symlinks (Telescope, history via `fH`)
+- `<Leader>fx` — live grep excluding `tests/` (Telescope, history via `fH`)
 - `<Leader>fb` — buffers
 - `<Leader>fc` — word under cursor (grep)
 - `<Leader>fr` — registers
