@@ -100,6 +100,22 @@ local function octo_change_or_file(motion, queue_key)
   end
 end
 
+-- ]v: toggle GitHub viewed state on the file currently shown, not the file
+-- panel cursor (the built-in toggle_viewed action follows the panel). Server
+-- side through mark/unmarkFileAsViewed, so the browser PR agrees.
+local function octo_toggle_viewed_current()
+  local ok, reviews = pcall(require, "octo.reviews")
+  if not ok then return end
+  local review = reviews.get_current_review()
+  local layout = review and review.layout
+  local file = layout and layout.get_current_file and layout:get_current_file()
+  if file == nil or file.toggle_viewed == nil then
+    vim.notify("octo: no current file", vim.log.levels.WARN)
+    return
+  end
+  file:toggle_viewed()
+end
+
 -- `:Octo pr edit` with no number edits the current branch's PR (like `gh`),
 -- instead of octo's "Missing arguments". Replaces octo's own `:Octo` command
 -- with a wrapper that injects the number and delegates everything else to
@@ -146,6 +162,8 @@ return {
         prev_thread = { lhs = "[t", desc = "move to previous thread" },
         select_next_entry = { lhs = "]q", desc = "move to next file" },
         select_prev_entry = { lhs = "[q", desc = "move to previous file" },
+        select_next_unviewed_entry = { lhs = "]u", desc = "move to next unviewed file" },
+        select_prev_unviewed_entry = { lhs = "[u", desc = "move to previous unviewed file" },
       },
       submit_win = {
         approve_review = { lhs = "<A-a>", desc = "approve review" },
@@ -180,6 +198,7 @@ return {
           vim.keymap.set("n", "[t", function() octo_goto_thread(-1) end, { buffer = args.buf, desc = "Octo: prev review thread (any file)" })
           vim.keymap.set("n", "]g", octo_change_or_file("]c", "]q"), { buffer = args.buf, desc = "Octo: next change, then next file" })
           vim.keymap.set("n", "[g", octo_change_or_file("[c", "[q"), { buffer = args.buf, desc = "Octo: prev change, then prev file" })
+          vim.keymap.set("n", "]v", octo_toggle_viewed_current, { buffer = args.buf, desc = "Octo: toggle viewed for current file" })
         end)
       end,
     })
