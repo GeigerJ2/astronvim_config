@@ -300,9 +300,29 @@ return {
         },
         -- References in a snacks picker (filter left, preview right) instead of
         -- AstroNvim's quickfix list. Single match jumps straight in.
+        -- Src-only usages: the transform drops test files (tests/ dirs and
+        -- test-named files) so the picker shows production callers first.
         ["<Leader>lR"] = {
-          function() require("snacks").picker.lsp_references() end,
-          desc = "Search references (picker)",
+          function()
+            require("snacks").picker.lsp_references {
+              transform = function(item)
+                local f = item.file or item.filename or ""
+                if f:match("/tests?/") then return false end
+                local base = f:match("([^/]+)$") or ""
+                if
+                  base == "conftest.py"
+                  or base:match("^test_")
+                  or base:match("^test%.")
+                  or base:match("_test%.")
+                  or base:match("%.test%.")
+                  or base:match("%.spec%.")
+                then
+                  return false
+                end
+              end,
+            }
+          end,
+          desc = "Search references, src only (picker)",
           cond = "textDocument/references",
         },
         ["<Leader>lq"] = {
