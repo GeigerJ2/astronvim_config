@@ -300,9 +300,14 @@ return {
         },
         -- References in a snacks picker (filter left, preview right) instead of
         -- AstroNvim's quickfix list. Single match jumps straight in.
-        -- Src-only usages: the transform drops test files (tests/ dirs and
-        -- test-named files) so the picker shows production callers first.
         ["<Leader>lR"] = {
+          function() require("snacks").picker.lsp_references() end,
+          desc = "Search references (picker)",
+          cond = "textDocument/references",
+        },
+        -- Same picker, src-only usages: the transform drops test files
+        -- (tests/ dirs and test-named files) so production callers come first.
+        ["<Leader>lU"] = {
           function()
             require("snacks").picker.lsp_references {
               transform = function(item)
