@@ -100,7 +100,7 @@ local function octo_change_or_file(motion, queue_key)
   end
 end
 
--- ]v: toggle GitHub viewed state on the file currently shown, not the file
+-- `,,`: toggle GitHub viewed state on the file currently shown, not the file
 -- panel cursor (the built-in toggle_viewed action follows the panel). Server
 -- side through mark/unmarkFileAsViewed, so the browser PR agrees.
 local function octo_toggle_viewed_current()
@@ -198,7 +198,7 @@ return {
           vim.keymap.set("n", "[t", function() octo_goto_thread(-1) end, { buffer = args.buf, desc = "Octo: prev review thread (any file)" })
           vim.keymap.set("n", "]g", octo_change_or_file("]c", "]q"), { buffer = args.buf, desc = "Octo: next change, then next file" })
           vim.keymap.set("n", "[g", octo_change_or_file("[c", "[q"), { buffer = args.buf, desc = "Octo: prev change, then prev file" })
-          vim.keymap.set("n", "]v", octo_toggle_viewed_current, { buffer = args.buf, desc = "Octo: toggle viewed for current file" })
+          vim.keymap.set("n", "<localleader>,", octo_toggle_viewed_current, { buffer = args.buf, desc = "Octo: toggle viewed for current file" })
         end)
       end,
     })
