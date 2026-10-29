@@ -330,6 +330,24 @@ return {
           desc = "Search references, src only (picker)",
           cond = "textDocument/references",
         },
+        -- `ly`: copy the whole buffer diagnostic list in the same
+        -- `file:line:col: message` format as the picker's `y`/`Y` keys,
+        -- without opening the picker.
+        ["<Leader>ly"] = {
+          function()
+            local buf = vim.api.nvim_get_current_buf()
+            local items = {}
+            for _, d in ipairs(vim.diagnostic.get(buf)) do
+              items[#items + 1] = {
+                file = vim.api.nvim_buf_get_name(buf),
+                pos = { d.lnum + 1, d.col },
+                text = d.message:gsub("\n", " "),
+              }
+            end
+            yank_diag_items(items)
+          end,
+          desc = "Yank buffer diagnostics",
+        },
         ["<Leader>lq"] = {
           function()
             require("snacks").picker.diagnostics_buffer {
