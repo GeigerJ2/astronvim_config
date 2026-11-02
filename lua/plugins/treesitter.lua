@@ -22,6 +22,7 @@ return {
         "dockerfile",
         "lua",
         "vim",
+        "rst",
       },
     },
   },

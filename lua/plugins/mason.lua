@@ -16,6 +16,7 @@ return {
         "python-lsp-server",
         "ruff",
         "marksman",
+        "esbonio",
         "bash-language-server",
         "clangd",
         "fish-lsp",

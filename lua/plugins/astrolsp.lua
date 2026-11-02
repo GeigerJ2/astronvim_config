@@ -98,6 +98,7 @@ return {
       -- via <Leader>lpl and <Leader>lpr (vim.lsp.enable has no autostart concept)
       "ruff",
       "marksman",
+      "esbonio",
     },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
