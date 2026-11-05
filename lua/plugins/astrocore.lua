@@ -546,6 +546,7 @@ return {
               local buf = vim.api.nvim_win_get_buf(vim.api.nvim_tabpage_get_win(tab))
               local name = vim.api.nvim_buf_get_name(buf)
               items[#items + 1] = {
+                file = name ~= "" and name or "[No Name]",
                 text = string.format(
                   "%d: %s",
                   vim.api.nvim_tabpage_get_number(tab),
