@@ -539,7 +539,7 @@ return {
         -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
         -- Tab switcher in a snacks picker: one line per tabpage
         -- (number + current buffer), Enter jumps to it.
-        ["<Leader>T"] = {
+        ["<Leader><Tab>"] = {
           function()
             local items = {}
             for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
