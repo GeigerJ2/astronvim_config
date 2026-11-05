@@ -537,6 +537,34 @@ return {
         },
         -- which-key group label for the claudecode.nvim maps (defined in
         -- plugins/claudecode.lua); desc-only entry names the <Leader>a prefix.
+        -- Tab switcher in a snacks picker: one line per tabpage
+        -- (number + current buffer), Enter jumps to it.
+        ["<Leader>T"] = {
+          function()
+            local items = {}
+            for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+              local buf = vim.api.nvim_win_get_buf(vim.api.nvim_tabpage_get_win(tab))
+              local name = vim.api.nvim_buf_get_name(buf)
+              items[#items + 1] = {
+                text = string.format(
+                  "%d: %s",
+                  vim.api.nvim_tabpage_get_number(tab),
+                  name ~= "" and vim.fn.fnamemodify(name, ":~") or "[No Name]"
+                ),
+                tabpage = tab,
+              }
+            end
+            require("snacks").picker.pick({
+              items = items,
+              format = "text",
+              confirm = function(picker, item)
+                picker:close()
+                if item and item.tabpage then vim.api.nvim_set_current_tabpage(item.tabpage) end
+              end,
+            })
+          end,
+          desc = "Switch tab (picker)",
+        },
         ["<Leader>a"] = { desc = "󰚩 AI" },
 
         -- Toggle the CURRENT buffer's gitsigns base. Default is the PR merge-base
