@@ -68,6 +68,38 @@ return {
           function() require("aerial").nav_toggle() end,
           desc = "Navigate symbols (aerial)",
         }
+        -- Copyable outline: render aerial's symbol tree as plain text
+        -- (tree guides + names, no icons) in a scratch vsplit, so the
+        -- structure can be yanked. Folding the source and yanking
+        -- selects the whole file; the aerial sidebar is for navigation.
+        opts.mappings.n["<Leader>lO"] = {
+          function()
+            local data = require("aerial.data").get(0)
+            if not data then
+              vim.notify("aerial: no symbols for this buffer", vim.log.levels.WARN)
+              return
+            end
+            local lines, stack = {}, {}
+            data:visit(function(item)
+              local level = item.level or 0
+              while #stack > level do stack[#stack] = nil end
+              local prefix = ""
+              for _, anc in ipairs(stack) do
+                prefix = prefix .. (anc.next_sibling and "│ " or "  ")
+              end
+              if level > 0 then prefix = prefix .. (item.next_sibling == nil and "└ " or "├ ") end
+              lines[#lines + 1] = prefix .. (item.name or "?")
+              stack[level + 1] = item
+            end)
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+            vim.bo[buf].buftype = "nofile"
+            vim.bo[buf].bufhidden = "wipe"
+            vim.cmd("vsplit")
+            vim.api.nvim_win_set_buf(0, buf)
+          end,
+          desc = "Copyable outline (aerial)",
+        }
       end,
     },
   },
