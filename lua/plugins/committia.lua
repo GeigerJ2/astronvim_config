@@ -6,9 +6,11 @@ return {
     opts = {
       autocmds = {
         gitcommit_setup = {
+          -- COMMIT_EDITMSG arrives with FileType gitcommit; commit-msgs.md
+          -- series drafts opt in by filename and get the same rulers.
           {
-            event = "FileType",
-            pattern = "gitcommit",
+            event = { "FileType", "BufReadPost", "BufNewFile" },
+            pattern = { "gitcommit", "*commit-msgs.md" },
             callback = function()
               vim.opt_local.colorcolumn = "50,72"
 
