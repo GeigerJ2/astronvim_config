@@ -233,12 +233,23 @@ return {
     -- Start with diagnostics off (basedpyright/ruff are noisy in these codebases).
     -- <Leader>ud toggles vim.diagnostic.enable() back on; the display config above
     -- (virtual_text/underline) applies whenever they're re-enabled.
+    -- enable(false) only covers existing buffer/namespace pairs, so a bare
+    -- VimEnter runs before any LSP attaches and later namespaces default back
+    -- on. Also disable on LspAttach until the user toggles explicitly (flag set
+    -- by the <Leader>ud override below; nil means never toggled).
     autocmds = {
       diagnostics_off_at_startup = {
         {
-          event = "VimEnter",
+          event = { "VimEnter", "LspAttach" },
           desc = "Disable diagnostics by default",
-          callback = function() vim.diagnostic.enable(false) end,
+          callback = function(args)
+            if args.event == "LspAttach" and vim.g.diagnostics_off_at_startup == false then return end
+            if args.event == "LspAttach" then
+              vim.diagnostic.enable(false, { bufnr = args.buf })
+            else
+              vim.diagnostic.enable(false)
+            end
+          end,
         },
       },
       -- 50/72 commit-message guide columns in COMMIT_MESSAGES.md (the multi-commit
@@ -526,6 +537,15 @@ return {
     mappings = {
       -- first key is the mode
       n = {
+        -- <Leader>ud override: AstroNvim's toggle flips enable() with no memory,
+        -- so record the intent for diagnostics_off_at_startup (nil = never toggled).
+        ["<Leader>ud"] = {
+          function()
+            vim.diagnostic.enable(not vim.diagnostic.is_enabled())
+            vim.g.diagnostics_off_at_startup = not vim.diagnostic.is_enabled()
+          end,
+          desc = "Toggle diagnostics",
+        },
         -- Review annotation: append `  # > rev-jg: ` at EOL, enter insert.
         -- Buffer-global (works in normal buffers after `gf` from diffview).
         ["<Leader>ga"] = {
