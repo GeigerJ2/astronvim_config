@@ -250,6 +250,18 @@ return {
           args = { "--ignore=PLC0415", "--extend-exclude=*.pyi" },
         },
       },
+      esbonio = {
+        -- Esbonio spawns a sphinx-agent under its own interpreter, which has
+        -- no Sphinx installed, so the agent crashes and the server dies.
+        -- Run the project environment instead (resolves per Sphinx root).
+        settings = {
+          esbonio = {
+            sphinx = {
+              pythonCommand = { "uv", "run", "python" },
+            },
+          },
+        },
+      },
     },
     -- customize how language servers are attached
     handlers = {
