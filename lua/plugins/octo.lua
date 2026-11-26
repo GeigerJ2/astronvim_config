@@ -198,6 +198,18 @@ return {
           vim.keymap.set("n", "[t", function() octo_goto_thread(-1) end, { buffer = args.buf, desc = "Octo: prev review thread (any file)" })
           vim.keymap.set("n", "]g", octo_change_or_file("]c", "]q"), { buffer = args.buf, desc = "Octo: next change, then next file" })
           vim.keymap.set("n", "[g", octo_change_or_file("[c", "[q"), { buffer = args.buf, desc = "Octo: prev change, then prev file" })
+          vim.keymap.set(
+            "n",
+            "]G",
+            function() require("hunk_nav").jump "next" end,
+            { buffer = args.buf, desc = "Octo: next change outside window, then next file" }
+          )
+          vim.keymap.set(
+            "n",
+            "[G",
+            function() require("hunk_nav").jump "prev" end,
+            { buffer = args.buf, desc = "Octo: prev change outside window, then prev file" }
+          )
           vim.keymap.set("n", "<localleader>,", octo_toggle_viewed_current, { buffer = args.buf, desc = "Octo: toggle viewed for current file" })
         end)
       end,

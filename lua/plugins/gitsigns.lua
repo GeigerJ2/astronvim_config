@@ -15,6 +15,19 @@ return {
     opts.attach_to_untracked = true
     opts.on_attach = function(bufnr)
       if orig_on_attach then orig_on_attach(bufnr) end
+      -- Replace AstroNvim's first/last-hunk keys; keep `]g`/`[g` unchanged.
+      vim.keymap.set(
+        "n",
+        "]G",
+        function() require("hunk_nav").jump "next" end,
+        { buffer = bufnr, desc = "Next Git hunk outside window" }
+      )
+      vim.keymap.set(
+        "n",
+        "[G",
+        function() require("hunk_nav").jump "prev" end,
+        { buffer = bufnr, desc = "Prev Git hunk outside window" }
+      )
       local file = vim.api.nvim_buf_get_name(bufnr)
       if file == "" then return end
       local dir = vim.fn.fnamemodify(file, ":h")

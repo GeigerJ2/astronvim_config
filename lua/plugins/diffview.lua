@@ -169,6 +169,18 @@ return {
     vim.list_extend(view, {
       { "n", "]g", change_or_entry("]c", actions.select_next_entry), { desc = "Next change (or file)" } },
       { "n", "[g", change_or_entry("[c", actions.select_prev_entry), { desc = "Prev change (or file)" } },
+      {
+        "n",
+        "]G",
+        function() require("hunk_nav").jump("next", actions.select_next_entry) end,
+        { desc = "Next change outside window (or file)" },
+      },
+      {
+        "n",
+        "[G",
+        function() require("hunk_nav").jump("prev", actions.select_prev_entry) end,
+        { desc = "Prev change outside window (or file)" },
+      },
       -- ]q/[q: cycle files across the whole diff, like octo review.
       { "n", "]q", actions.select_next_entry, { desc = "Next file" } },
       { "n", "[q", actions.select_prev_entry, { desc = "Prev file" } },

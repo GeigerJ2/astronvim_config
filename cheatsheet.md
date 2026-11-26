@@ -328,7 +328,9 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 ## 4. Git
 
 ### 4.1 Gitsigns (in source buffers)
-- `]c` / `[c` — next / prev hunk
+- `]g` / `[g`: next / prev hunk
+- `]G` / `[G`: next / prev hunk outside the current visible window, centered.
+  Skips hunks intersecting the window, without wrapping. Replaces AstroNvim's first / last hunk keys.
 - `<Leader>gh` (group): `s` stage hunk, `r` reset hunk, `S` stage buffer,
   `u` undo stage, `R` reset buffer, `p` preview hunk, `b` blame line,
   `d` diff, `D` diff against `~`
@@ -344,6 +346,8 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - Inside: `<Tab>`/`<S-Tab>` next/prev file, `gf` open in tab, `<Leader>e`
   toggle file panel, `g<C-x>` cycle layout, `[x`/`]x` next/prev conflict,
   `L` commit message
+- `]g` / `[g`: next / prev change; `]G` / `[G`: next / prev change outside the
+  current visible window, centered. Skips visible hunks; at file boundaries both pairs select the next / prev file.
 - File history: `y` copy commit hash, `gd` full commit diff, `R` refresh keeping position
 
 ### 4.3 Neogit
@@ -401,7 +405,9 @@ AstroNvim's `<Leader>tt` (ToggleTerm), `<Leader>tl` (lazygit),
 - `]c` / `[c` — next / prev review comment
 - `]t` / `[t` — next / prev review thread
 - `]q` / `[q` — next / prev file in review
-- `]g` / `[g` — next / prev change, cascading across files like `]q` / `[q` (shadows gitsigns hunks in review diffs)
+- `]g` / `[g`: next / prev change, cascading across files like `]q` / `[q` (shadows gitsigns hunks in review diffs)
+- `]G` / `[G`: next / prev change outside the current visible window, centered.
+  Skips visible hunks and cascades to the next / prev file at a boundary, including long hunks spanning the window.
 - File panel: `j`/`k` navigate, `<CR>` select
 - First display of a review/`:ReviewCommits` diff jumps to the first change
 - *This config patches `FileEntry.show_diff`* so diff mode reliably engages
